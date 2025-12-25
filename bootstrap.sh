@@ -9,7 +9,25 @@
 
 set -e  # Exit on error
 
-# Parse command line arguments
+################################################################################
+# Email Validation Function
+################################################################################
+
+validate_email() {
+    local email="$1"
+    local param_name="$2"
+
+    if [[ ! "$email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+        echo "Error: Invalid email format for $param_name: $email"
+        echo "Email must be in format: user@domain.com"
+        exit 1
+    fi
+}
+
+################################################################################
+# Parse Command Line Arguments
+################################################################################
+
 VERBOSE=false
 UNATTENDED=false
 
@@ -28,14 +46,17 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         --git-email)
+            validate_email "$2" "--git-email"
             export GIT_EMAIL="$2"
             shift 2
             ;;
         --ssh-email)
+            validate_email "$2" "--ssh-email"
             export SSH_EMAIL="$2"
             shift 2
             ;;
         --email)
+            validate_email "$2" "--email"
             export EMAIL="$2"
             shift 2
             ;;
