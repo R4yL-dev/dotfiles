@@ -12,8 +12,9 @@ set -e  # Exit on error
 # Parse command line arguments
 VERBOSE=false
 UNATTENDED=false
-for arg in "$@"; do
-    case $arg in
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
         -v|--verbose)
             VERBOSE=true
             shift
@@ -21,6 +22,27 @@ for arg in "$@"; do
         -y|--yes)
             UNATTENDED=true
             shift
+            ;;
+        --git-name)
+            GIT_NAME="$2"
+            shift 2
+            ;;
+        --git-email)
+            GIT_EMAIL="$2"
+            shift 2
+            ;;
+        --ssh-email)
+            SSH_EMAIL="$2"
+            shift 2
+            ;;
+        --email)
+            EMAIL="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [-v|--verbose] [-y|--yes] [--git-name \"Name\"] [--git-email \"email\"] [--ssh-email \"email\"] [--email \"email\"]"
+            exit 1
             ;;
     esac
 done
@@ -886,18 +908,20 @@ print_final_message() {
         if [ "$GIT_SKIPPED" = true ]; then
             echo -e "${YELLOW}Git Configuration:${NC}"
             echo -e "   ${INFO} Run manually: ${BLUE}./setup-git.sh${NC}"
-            echo -e "   ${INFO} Or set environment variables and rerun with ${BLUE}-y${NC}:"
-            echo -e "       ${BLUE}GIT_NAME=\"Your Name\" GIT_EMAIL=\"you@example.com\" ./bootstrap.sh -y${NC}"
-            echo -e "       Or use ${BLUE}EMAIL${NC} as default for both Git and SSH"
+            echo -e "   ${INFO} Or rerun with arguments:"
+            echo -e "       ${BLUE}./bootstrap.sh -y --git-name \"Your Name\" --git-email \"you@example.com\"${NC}"
+            echo -e "   ${INFO} Or use ${BLUE}--email${NC} as default for both Git and SSH:"
+            echo -e "       ${BLUE}./bootstrap.sh -y --git-name \"Your Name\" --email \"you@example.com\"${NC}"
             echo
         fi
 
         if [ "$SSH_SKIPPED" = true ]; then
             echo -e "${YELLOW}SSH Key Generation:${NC}"
             echo -e "   ${INFO} Run manually: ${BLUE}./setup-ssh.sh${NC}"
-            echo -e "   ${INFO} Or set environment variable and rerun with ${BLUE}-y${NC}:"
-            echo -e "       ${BLUE}SSH_EMAIL=\"you@example.com\" ./bootstrap.sh -y${NC}"
-            echo -e "       Or use ${BLUE}EMAIL${NC} as default for both Git and SSH"
+            echo -e "   ${INFO} Or rerun with argument:"
+            echo -e "       ${BLUE}./bootstrap.sh -y --ssh-email \"you@example.com\"${NC}"
+            echo -e "   ${INFO} Or use ${BLUE}--email${NC} as default for both Git and SSH:"
+            echo -e "       ${BLUE}./bootstrap.sh -y --email \"you@example.com\"${NC}"
             echo
         fi
     fi
