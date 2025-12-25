@@ -615,8 +615,11 @@ setup_git_prompt() {
 
     # Unattended mode: check environment variables
     if [ "$UNATTENDED" = true ]; then
+        # Calculate final git email with fallback pattern
+        local final_git_email="${GIT_EMAIL:-${EMAIL}}"
+
         # Check if required environment variables are set
-        if [ -z "$GIT_NAME" ] || [ -z "$EMAIL" ]; then
+        if [ -z "$GIT_NAME" ] || [ -z "$final_git_email" ]; then
             print_skip "Git configuration skipped (environment variables not set)"
             GIT_SKIPPED=true
             return
@@ -712,8 +715,11 @@ setup_ssh_key() {
 
     # Unattended mode: check environment variables
     if [ "$UNATTENDED" = true ]; then
+        # Calculate final ssh email with fallback pattern
+        local final_ssh_email="${SSH_EMAIL:-${EMAIL}}"
+
         # Check if required environment variable is set
-        if [ -z "$EMAIL" ]; then
+        if [ -z "$final_ssh_email" ]; then
             print_skip "SSH key generation skipped (EMAIL not set)"
             SSH_SKIPPED=true
             return
@@ -879,15 +885,19 @@ print_final_message() {
 
         if [ "$GIT_SKIPPED" = true ]; then
             echo -e "${YELLOW}Git Configuration:${NC}"
-            echo -e "   ${INFO} Run: ${BLUE}./setup-git.sh${NC}"
-            echo -e "   ${INFO} Or in unattended mode: ${BLUE}GIT_NAME=\"Your Name\" EMAIL=\"you@example.com\" ./bootstrap.sh -y${NC}"
+            echo -e "   ${INFO} Run manually: ${BLUE}./setup-git.sh${NC}"
+            echo -e "   ${INFO} Or set environment variables and rerun with ${BLUE}-y${NC}:"
+            echo -e "       ${BLUE}GIT_NAME=\"Your Name\" GIT_EMAIL=\"you@example.com\" ./bootstrap.sh -y${NC}"
+            echo -e "       Or use ${BLUE}EMAIL${NC} as default for both Git and SSH"
             echo
         fi
 
         if [ "$SSH_SKIPPED" = true ]; then
             echo -e "${YELLOW}SSH Key Generation:${NC}"
-            echo -e "   ${INFO} Run: ${BLUE}./setup-ssh.sh${NC}"
-            echo -e "   ${INFO} Or in unattended mode: ${BLUE}EMAIL=\"you@example.com\" ./bootstrap.sh -y${NC}"
+            echo -e "   ${INFO} Run manually: ${BLUE}./setup-ssh.sh${NC}"
+            echo -e "   ${INFO} Or set environment variable and rerun with ${BLUE}-y${NC}:"
+            echo -e "       ${BLUE}SSH_EMAIL=\"you@example.com\" ./bootstrap.sh -y${NC}"
+            echo -e "       Or use ${BLUE}EMAIL${NC} as default for both Git and SSH"
             echo
         fi
     fi
