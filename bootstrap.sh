@@ -39,6 +39,7 @@ TPM_CHANGED=false
 TPM_INSTALLED=false    # New installation (not update)
 SHELL_CHANGED=false
 TOOLS_INSTALLED=false  # Essential tools installed
+SSH_KEY_GENERATED=false  # SSH key generated
 BACKUPS_CREATED=false
 declare -a BACKUPS_LIST
 
@@ -569,6 +570,114 @@ setup_git_prompt() {
 }
 
 ################################################################################
+# Setup SSH Key (Optional)
+################################################################################
+
+setup_ssh_key() {
+    print_header "SSH Key Generation (optional)"
+
+    # Check if SSH keys already exist
+    if [ -f "$HOME/.ssh/id_ed25519" ] || [ -f "$HOME/.ssh/id_rsa" ]; then
+        print_skip "SSH key already exists"
+
+        # Display the public key
+        if [ -f "$HOME/.ssh/id_ed25519.pub" ]; then
+            echo
+            print_info "Your public SSH key (ed25519):"
+            echo
+            cat "$HOME/.ssh/id_ed25519.pub"
+            echo
+        elif [ -f "$HOME/.ssh/id_rsa.pub" ]; then
+            echo
+            print_info "Your public SSH key (RSA):"
+            echo
+            cat "$HOME/.ssh/id_rsa.pub"
+            echo
+        fi
+
+        read -p "Do you want to generate a new SSH key? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[OoYy]$ ]]; then
+            print_info "SSH key generation skipped"
+            return
+        fi
+    else
+        print_info "No SSH key found"
+        echo
+        print_info "Generating an SSH key will allow you to:"
+        print_info "  - Push/pull from GitHub/GitLab without passwords"
+        print_info "  - Connect to remote servers securely"
+        echo
+        read -p "Do you want to generate an SSH key? (Y/n): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Nn]$ ]]; then
+            print_info "SSH key generation skipped"
+            return
+        fi
+    fi
+
+    # Get email for the key
+    local ssh_email=""
+
+    # Try to get email from git config if available
+    if [ -f "$HOME/.gitconfig" ]; then
+        ssh_email=$(git config --global user.email 2>/dev/null || echo "")
+    fi
+
+    if [ -n "$ssh_email" ]; then
+        echo
+        read -p "Email for SSH key (default: $ssh_email): " input_email
+        if [ -n "$input_email" ]; then
+            ssh_email="$input_email"
+        fi
+    else
+        echo
+        read -p "Email for SSH key: " ssh_email
+        while [ -z "$ssh_email" ]; do
+            echo -e "${RED}Email cannot be empty${NC}"
+            read -p "Email for SSH key: " ssh_email
+        done
+    fi
+
+    # Create .ssh directory if it doesn't exist
+    mkdir -p "$HOME/.ssh"
+    chmod 700 "$HOME/.ssh"
+
+    # Generate SSH key (ed25519 is more modern and secure)
+    print_info "Generating SSH key (ed25519)..."
+
+    if ssh-keygen -t ed25519 -C "$ssh_email" -f "$HOME/.ssh/id_ed25519" -N ""; then
+        print_success "SSH key generated successfully"
+        SSH_KEY_GENERATED=true
+
+        # Start ssh-agent and add key
+        print_info "Adding key to ssh-agent..."
+        eval "$(ssh-agent -s)" > /dev/null 2>&1
+        ssh-add "$HOME/.ssh/id_ed25519" > /dev/null 2>&1
+        print_success "Key added to ssh-agent"
+
+        # Display the public key
+        echo
+        echo -e "${GREEN}╔════════════════════════════════════════════════════════╗${NC}"
+        echo -e "${GREEN}║                                                        ║${NC}"
+        echo -e "${GREEN}║           Your SSH Public Key (copy this!)             ║${NC}"
+        echo -e "${GREEN}║                                                        ║${NC}"
+        echo -e "${GREEN}╚════════════════════════════════════════════════════════╝${NC}"
+        echo
+        cat "$HOME/.ssh/id_ed25519.pub"
+        echo
+        echo -e "${YELLOW}📋 Next steps to add this key to GitHub:${NC}"
+        echo -e "   ${INFO} 1. Copy the key above (already in your clipboard if using terminal with copy support)"
+        echo -e "   ${INFO} 2. Go to: ${BLUE}https://github.com/settings/keys${NC}"
+        echo -e "   ${INFO} 3. Click 'New SSH key'"
+        echo -e "   ${INFO} 4. Paste your key and save"
+        echo
+    else
+        print_error "Failed to generate SSH key"
+    fi
+}
+
+################################################################################
 # Final Message
 ################################################################################
 
@@ -578,7 +687,7 @@ print_final_message() {
     if [ "$CONFIGS_DEPLOYED" = true ] || [ "$KITTY_CONFIGURED" = true ] || \
        [ "$GIT_CONFIGURED" = true ] || [ "$ZINIT_CHANGED" = true ] || \
        [ "$TPM_CHANGED" = true ] || [ "$SHELL_CHANGED" = true ] || \
-       [ "$TOOLS_INSTALLED" = true ]; then
+       [ "$TOOLS_INSTALLED" = true ] || [ "$SSH_KEY_GENERATED" = true ]; then
         anything_changed=true
     fi
 
@@ -696,6 +805,11 @@ print_final_message() {
         something_shown=true
     fi
 
+    if [ "$SSH_KEY_GENERATED" = true ]; then
+        echo -e "   ${CHECK} SSH key generated (ed25519)"
+        something_shown=true
+    fi
+
     if [ "$something_shown" = false ]; then
         echo -e "   ${INFO} Everything was already configured"
     fi
@@ -732,6 +846,7 @@ main() {
     change_default_shell
     install_essential_tools
     setup_git_prompt
+    setup_ssh_key
     print_final_message
 }
 

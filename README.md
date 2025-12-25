@@ -63,8 +63,9 @@ The script will automatically:
 9. ✅ Install TPM (Tmux plugin manager)
 10. ✅ **Install Tmux plugins automatically**
 11. ✅ Configure default shell (zsh)
-12. ✅ **Offer to install essential tools** (neovim, tldr)
+12. ✅ **Offer to install essential tools** (neovim, tldr, jq, curl)
 13. ✅ **Offer to configure Git** (name, email, aliases)
+14. ✅ **Offer to generate SSH key** (ed25519, ready for GitHub)
 
 ### Updating Configuration
 
@@ -190,11 +191,22 @@ After installation, the following symlinks are created:
 
 Optional installation of frequently used tools:
 - **neovim**: Modern, extensible text editor
-- **tldr**: Simplified man pages with practical examples
+- **tldr**: Simplified man pages with practical examples (auto-updated after install)
 - **jq**: Command-line JSON processor
 - **curl**: Tool for transferring data with URLs
 
 These tools are offered during installation - accept to install all, decline to skip.
+
+### SSH Key
+
+Automatic SSH key generation for seamless GitHub/GitLab access:
+- **Type**: ed25519 (modern, secure, compact)
+- **Auto-detection**: Checks if key already exists
+- **Email integration**: Uses Git email if configured
+- **Agent setup**: Automatically adds key to ssh-agent
+- **GitHub ready**: Displays public key with instructions to add on GitHub
+
+The key is generated without passphrase for convenience. After generation, simply copy the displayed public key to GitHub Settings → SSH Keys.
 
 ## 🎨 Customization
 
