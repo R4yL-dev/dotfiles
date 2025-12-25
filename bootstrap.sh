@@ -461,11 +461,11 @@ change_default_shell() {
         print_info "Current shell: $CURRENT_SHELL"
         print_info "Changing default shell to zsh..."
         if [ -x /bin/zsh ]; then
-            chsh -s /bin/zsh  # Interactive command - always show password prompt
+            run_cmd sudo chsh -s /bin/zsh "$USER"
             print_success "Default shell changed to zsh"
             SHELL_CHANGED=true
         elif [ -x /usr/bin/zsh ]; then
-            chsh -s /usr/bin/zsh  # Interactive command - always show password prompt
+            run_cmd sudo chsh -s /usr/bin/zsh "$USER"
             print_success "Default shell changed to zsh"
             SHELL_CHANGED=true
         else
