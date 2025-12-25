@@ -655,23 +655,6 @@ setup_ssh_key() {
         eval "$(ssh-agent -s)" > /dev/null 2>&1
         ssh-add "$HOME/.ssh/id_ed25519" > /dev/null 2>&1
         print_success "Key added to ssh-agent"
-
-        # Display the public key
-        echo
-        echo -e "${GREEN}╔════════════════════════════════════════════════════════╗${NC}"
-        echo -e "${GREEN}║                                                        ║${NC}"
-        echo -e "${GREEN}║           Your SSH Public Key (copy this!)             ║${NC}"
-        echo -e "${GREEN}║                                                        ║${NC}"
-        echo -e "${GREEN}╚════════════════════════════════════════════════════════╝${NC}"
-        echo
-        cat "$HOME/.ssh/id_ed25519.pub"
-        echo
-        echo -e "${YELLOW}📋 Next steps to add this key to GitHub:${NC}"
-        echo -e "   ${INFO} 1. Copy the key above (already in your clipboard if using terminal with copy support)"
-        echo -e "   ${INFO} 2. Go to: ${BLUE}https://github.com/settings/keys${NC}"
-        echo -e "   ${INFO} 3. Click 'New SSH key'"
-        echo -e "   ${INFO} 4. Paste your key and save"
-        echo
     else
         print_error "Failed to generate SSH key"
     fi
@@ -723,6 +706,24 @@ print_final_message() {
         echo -e "${BLUE}╚════════════════════════════════════════════════════════╝${NC}"
     fi
     echo
+
+    # Show SSH key if it was just generated
+    if [ "$SSH_KEY_GENERATED" = true ]; then
+        echo -e "${GREEN}╔════════════════════════════════════════════════════════╗${NC}"
+        echo -e "${GREEN}║                                                        ║${NC}"
+        echo -e "${GREEN}║           Your SSH Public Key (copy this!)             ║${NC}"
+        echo -e "${GREEN}║                                                        ║${NC}"
+        echo -e "${GREEN}╚════════════════════════════════════════════════════════╝${NC}"
+        echo
+        cat "$HOME/.ssh/id_ed25519.pub"
+        echo
+        echo -e "${YELLOW}📋 Add this key to GitHub:${NC}"
+        echo -e "   ${INFO} 1. Copy the key above"
+        echo -e "   ${INFO} 2. Go to: ${BLUE}https://github.com/settings/keys${NC}"
+        echo -e "   ${INFO} 3. Click 'New SSH key'"
+        echo -e "   ${INFO} 4. Paste your key and save"
+        echo
+    fi
 
     # Only show "Next Steps" if shell reload is needed
     if [ "$reload_needed" = true ]; then
