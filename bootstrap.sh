@@ -461,8 +461,6 @@ change_default_shell() {
 ################################################################################
 
 install_essential_tools() {
-    print_header "Essential Tools Installation (optional)"
-
     # Map of package names to command names
     declare -A tool_commands=(
         ["neovim"]="nvim"
@@ -474,9 +472,26 @@ install_essential_tools() {
 
     local tools=("neovim" "tldr" "jq" "curl" "xclip")
 
-    # Display the list
-    print_info "The following tools will be installed:"
+    # Check which tools need to be installed FIRST
+    local to_install=()
     for tool in "${tools[@]}"; do
+        local cmd="${tool_commands[$tool]}"
+        if ! command -v "$cmd" &> /dev/null; then
+            to_install+=("$tool")
+        fi
+    done
+
+    # If all tools are already installed, skip this section entirely
+    if [ ${#to_install[@]} -eq 0 ]; then
+        return
+    fi
+
+    # Show header only if there are tools to install
+    print_header "Essential Tools Installation (optional)"
+
+    # Display the list of missing tools
+    print_info "The following tools are not installed:"
+    for tool in "${to_install[@]}"; do
         echo -e "   ${INFO} $tool"
     done
     echo
@@ -488,43 +503,24 @@ install_essential_tools() {
         return
     fi
 
-    # Install all tools
-    print_info "Installing essential tools..."
-
-    local to_install=()
-
-    # Check which tools need to be installed
-    for tool in "${tools[@]}"; do
-        local cmd="${tool_commands[$tool]}"
-        if command -v "$cmd" &> /dev/null; then
-            print_skip "$tool already installed"
-        else
-            to_install+=("$tool")
-        fi
-    done
-
     # Install missing tools
-    if [ ${#to_install[@]} -gt 0 ]; then
-        print_info "Installing: ${to_install[*]}"
+    print_info "Installing: ${to_install[*]}"
 
-        if $INSTALL_CMD "${to_install[@]}"; then
-            print_success "Essential tools installed successfully"
-            TOOLS_INSTALLED=true
+    if $INSTALL_CMD "${to_install[@]}"; then
+        print_success "Essential tools installed successfully"
+        TOOLS_INSTALLED=true
 
-            # Post-installation: Update tldr cache if tldr was just installed
-            if [[ " ${to_install[@]} " =~ " tldr " ]]; then
-                print_info "Updating tldr database..."
-                if tldr -u &> /dev/null; then
-                    print_success "tldr database updated"
-                else
-                    print_warn "Failed to update tldr database (you can run 'tldr -u' manually later)"
-                fi
+        # Post-installation: Update tldr cache if tldr was just installed
+        if [[ " ${to_install[@]} " =~ " tldr " ]]; then
+            print_info "Updating tldr database..."
+            if tldr -u &> /dev/null; then
+                print_success "tldr database updated"
+            else
+                print_warn "Failed to update tldr database (you can run 'tldr -u' manually later)"
             fi
-        else
-            print_error "Failed to install some tools"
         fi
     else
-        print_skip "All essential tools are already installed"
+        print_error "Failed to install some tools"
     fi
 }
 
