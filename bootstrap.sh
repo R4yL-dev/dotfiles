@@ -73,6 +73,37 @@ print_skip() {
     echo -e "${CIRCLE} $1"
 }
 
+backup_file() {
+    local file="$1"
+    local move_instead_of_copy="${2:-false}"  # Optional: true to move instead of copy
+    local backup_dir="$HOME/.dotfiles-backups"
+    local timestamp=$(date +"%Y%m%d_%H%M%S")
+
+    # Create backup directory if it doesn't exist
+    mkdir -p "$backup_dir"
+
+    # Get the base name without path (remove .config/ prefix if present)
+    local basename=$(basename "$file")
+    # Special handling for .config subdirectories
+    if [[ "$file" == *".config/"* ]]; then
+        basename=$(echo "$file" | sed 's|.*/\.config/||')
+    fi
+    local backup_path="$backup_dir/${basename}.${timestamp}"
+
+    # Backup the file or directory
+    if [ "$move_instead_of_copy" = "true" ]; then
+        mv "$file" "$backup_path"
+    else
+        if [ -d "$file" ]; then
+            cp -r "$file" "$backup_path"
+        else
+            cp "$file" "$backup_path"
+        fi
+    fi
+
+    echo "$backup_path"
+}
+
 ################################################################################
 # System Detection
 ################################################################################
@@ -184,10 +215,8 @@ deploy_kitty_config() {
 
         # Backup existing config if any
         if [ -d "$HOME/.config/kitty" ] && [ ! -L "$HOME/.config/kitty" ]; then
-            local timestamp=$(date +"%Y%m%d_%H%M%S")
-            local backup="$HOME/.config/kitty.backup.$timestamp"
-            mv "$HOME/.config/kitty" "$backup"
-            print_success "Backup: ~/.config/kitty.backup.$timestamp"
+            local backup=$(backup_file "$HOME/.config/kitty" true)
+            print_success "Backup: $backup"
             BACKUPS_CREATED=true
             BACKUPS_LIST+=("$backup")
         fi
@@ -250,8 +279,7 @@ backup_configs() {
 
     for config in "$HOME/.zshrc" "$HOME/.tmux.conf"; do
         if [ -f "$config" ] && [ ! -L "$config" ]; then
-            local backup="${config}.backup.${timestamp}"
-            cp "$config" "$backup"
+            local backup=$(backup_file "$config")
             print_success "Backup created: $backup"
             BACKUPS_CREATED=true
             BACKUPS_LIST+=("$backup")

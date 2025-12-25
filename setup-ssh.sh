@@ -46,6 +46,24 @@ print_warn() {
     echo -e "${YELLOW}⚠${NC} $1"
 }
 
+backup_file() {
+    local file="$1"
+    local backup_dir="$HOME/.dotfiles-backups"
+    local timestamp=$(date +"%Y%m%d_%H%M%S")
+
+    # Create backup directory if it doesn't exist
+    mkdir -p "$backup_dir"
+
+    # Get the base name without path
+    local basename=$(basename "$file")
+    local backup_path="$backup_dir/${basename}.${timestamp}"
+
+    # Backup the file
+    cp "$file" "$backup_path"
+
+    echo "$backup_path"
+}
+
 ################################################################################
 # Main Setup
 ################################################################################
@@ -124,10 +142,13 @@ setup_ssh_key() {
 
     # Backup existing key if any
     if [ -f "$HOME/.ssh/id_ed25519" ]; then
+        local backup_dir="$HOME/.dotfiles-backups"
         local timestamp=$(date +"%Y%m%d_%H%M%S")
-        mv "$HOME/.ssh/id_ed25519" "$HOME/.ssh/id_ed25519.backup.$timestamp"
-        mv "$HOME/.ssh/id_ed25519.pub" "$HOME/.ssh/id_ed25519.pub.backup.$timestamp"
-        print_success "Existing key backed up"
+        mkdir -p "$backup_dir"
+
+        mv "$HOME/.ssh/id_ed25519" "$backup_dir/id_ed25519.${timestamp}"
+        mv "$HOME/.ssh/id_ed25519.pub" "$backup_dir/id_ed25519.pub.${timestamp}"
+        print_success "Existing key backed up to $backup_dir"
     fi
 
     # Generate SSH key (ed25519 is more modern and secure)

@@ -42,6 +42,24 @@ print_info() {
     echo -e "${INFO} $1"
 }
 
+backup_file() {
+    local file="$1"
+    local backup_dir="$HOME/.dotfiles-backups"
+    local timestamp=$(date +"%Y%m%d_%H%M%S")
+
+    # Create backup directory if it doesn't exist
+    mkdir -p "$backup_dir"
+
+    # Get the base name without path
+    local basename=$(basename "$file")
+    local backup_path="$backup_dir/${basename}.${timestamp}"
+
+    # Backup the file
+    cp "$file" "$backup_path"
+
+    echo "$backup_path"
+}
+
 ################################################################################
 # Main Setup
 ################################################################################
@@ -71,9 +89,8 @@ setup_git_config() {
             fi
         fi
         # Backup existing config
-        local timestamp=$(date +"%Y%m%d_%H%M%S")
-        cp "$HOME/.gitconfig" "$HOME/.gitconfig.backup.$timestamp"
-        print_success "Backup créé: ~/.gitconfig.backup.$timestamp"
+        local backup=$(backup_file "$HOME/.gitconfig")
+        print_success "Backup créé: $backup"
         # Remove the original file after backup
         rm "$HOME/.gitconfig"
     fi

@@ -80,10 +80,11 @@ git pull  # Get latest changes
 ### Security Features
 
 - **Idempotent**: Script can be safely rerun
-- **Automatic backup**: Existing configurations are backed up with timestamp
+- **Automatic backup**: Existing configurations are backed up to `~/.dotfiles-backups/` with timestamp
 - **Non-destructive**: No data is lost
 - **Smart detection**: Skips already completed steps
 - **Portable**: Works from any location
+- **Centralized backups**: All backups are stored in `~/.dotfiles-backups/` for easy management
 
 ## 📂 Structure
 
@@ -310,23 +311,28 @@ rm ~/.zshrc ~/.tmux.conf ~/.gitconfig
 rm -rf ~/.config/kitty
 
 # 2. Restore backups (if needed)
-cp ~/.zshrc.backup.YYYYMMDD_HHMMSS ~/.zshrc
-cp ~/.tmux.conf.backup.YYYYMMDD_HHMMSS ~/.tmux.conf
-cp ~/.gitconfig.backup.YYYYMMDD_HHMMSS ~/.gitconfig
-cp -r ~/.config/kitty.backup.YYYYMMDD_HHMMSS ~/.config/kitty
+# All backups are stored in ~/.dotfiles-backups/
+ls ~/.dotfiles-backups/  # List available backups
+cp ~/.dotfiles-backups/zshrc.YYYYMMDD_HHMMSS ~/.zshrc
+cp ~/.dotfiles-backups/tmux.conf.YYYYMMDD_HHMMSS ~/.tmux.conf
+cp ~/.dotfiles-backups/gitconfig.YYYYMMDD_HHMMSS ~/.gitconfig
+cp -r ~/.dotfiles-backups/kitty.YYYYMMDD_HHMMSS ~/.config/kitty
 
 # 3. Remove plugin managers (optional)
 rm -rf ~/.local/share/zinit
 rm -rf ~/.tmux/plugins
 
-# 4. Uninstall programs (optional)
+# 4. Remove backups directory (optional)
+rm -rf ~/.dotfiles-backups
+
+# 5. Uninstall programs (optional)
 # Fedora
 sudo dnf remove kitty cascadia-code-fonts
 
 # Debian
 sudo apt remove kitty fonts-cascadia-code
 
-# 5. Revert to default shell (optional)
+# 6. Revert to default shell (optional)
 chsh -s /bin/bash
 ```
 
