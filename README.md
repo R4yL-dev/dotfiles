@@ -91,6 +91,7 @@ git pull  # Get latest changes
 dotfiles/
 ├── bootstrap.sh            # Bootstrap script (installation & update)
 ├── setup-git.sh            # Git configuration generator
+├── setup-ssh.sh            # SSH key generator
 ├── README.md               # This documentation
 ├── zsh/
 │   └── .zshrc             # Zsh configuration
@@ -202,11 +203,19 @@ These tools are offered during installation - accept to install all, decline to 
 Automatic SSH key generation for seamless GitHub/GitLab access:
 - **Type**: ed25519 (modern, secure, compact)
 - **Auto-detection**: Checks if key already exists
+- **Email validation**: Regex validation like Git config
+- **Passphrase**: Optional (press Enter to skip)
 - **Email integration**: Uses Git email if configured
-- **Agent setup**: Automatically adds key to ssh-agent
+- **Agent setup**: Automatically adds key to ssh-agent (if no passphrase)
 - **GitHub ready**: Displays public key with instructions to add on GitHub
+- **Backup**: Existing keys are backed up before regeneration
 
-The key is generated without passphrase for convenience. After generation, simply copy the displayed public key to GitHub Settings → SSH Keys.
+After generation, the public key is displayed in the final message. Simply copy it to GitHub Settings → SSH Keys.
+
+To regenerate or create a new key:
+```bash
+./setup-ssh.sh
+```
 
 ## 🎨 Customization
 

@@ -576,20 +576,20 @@ setup_git_prompt() {
 setup_ssh_key() {
     print_header "SSH Key Generation (optional)"
 
-    # Check if SSH keys already exist
+    # Case 1: SSH key already exists
     if [ -f "$HOME/.ssh/id_ed25519" ] || [ -f "$HOME/.ssh/id_rsa" ]; then
         print_skip "SSH key already exists"
 
-        # Display the public key
+        # Display the existing public key
         if [ -f "$HOME/.ssh/id_ed25519.pub" ]; then
             echo
-            print_info "Your public SSH key (ed25519):"
+            print_info "Your current public SSH key (ed25519):"
             echo
             cat "$HOME/.ssh/id_ed25519.pub"
             echo
         elif [ -f "$HOME/.ssh/id_rsa.pub" ]; then
             echo
-            print_info "Your public SSH key (RSA):"
+            print_info "Your current public SSH key (RSA):"
             echo
             cat "$HOME/.ssh/id_rsa.pub"
             echo
@@ -601,6 +601,8 @@ setup_ssh_key() {
             print_info "SSH key generation skipped"
             return
         fi
+
+    # Case 2: No SSH key exists
     else
         print_info "No SSH key found"
         echo
@@ -616,47 +618,21 @@ setup_ssh_key() {
         fi
     fi
 
-    # Get email for the key
-    local ssh_email=""
+    # Run the SSH setup script
+    if [ -x "$SCRIPT_DIR/setup-ssh.sh" ]; then
+        "$SCRIPT_DIR/setup-ssh.sh" --skip-confirmation
+        local ssh_exit_code=$?
 
-    # Try to get email from git config if available
-    if [ -f "$HOME/.gitconfig" ]; then
-        ssh_email=$(git config --global user.email 2>/dev/null || echo "")
-    fi
-
-    if [ -n "$ssh_email" ]; then
-        echo
-        read -p "Email for SSH key (default: $ssh_email): " input_email
-        if [ -n "$input_email" ]; then
-            ssh_email="$input_email"
+        if [ $ssh_exit_code -eq 0 ]; then
+            SSH_KEY_GENERATED=true
+        elif [ $ssh_exit_code -eq 2 ]; then
+            print_info "SSH key generation cancelled by user"
+        else
+            print_error "SSH key generation failed"
+            print_warn "You can run ./setup-ssh.sh later to generate it"
         fi
     else
-        echo
-        read -p "Email for SSH key: " ssh_email
-        while [ -z "$ssh_email" ]; do
-            echo -e "${RED}Email cannot be empty${NC}"
-            read -p "Email for SSH key: " ssh_email
-        done
-    fi
-
-    # Create .ssh directory if it doesn't exist
-    mkdir -p "$HOME/.ssh"
-    chmod 700 "$HOME/.ssh"
-
-    # Generate SSH key (ed25519 is more modern and secure)
-    print_info "Generating SSH key (ed25519)..."
-
-    if ssh-keygen -t ed25519 -C "$ssh_email" -f "$HOME/.ssh/id_ed25519" -N ""; then
-        print_success "SSH key generated successfully"
-        SSH_KEY_GENERATED=true
-
-        # Start ssh-agent and add key
-        print_info "Adding key to ssh-agent..."
-        eval "$(ssh-agent -s)" > /dev/null 2>&1
-        ssh-add "$HOME/.ssh/id_ed25519" > /dev/null 2>&1
-        print_success "Key added to ssh-agent"
-    else
-        print_error "Failed to generate SSH key"
+        print_error "setup-ssh.sh not found or not executable"
     fi
 }
 

@@ -1,0 +1,183 @@
+#!/bin/bash
+
+################################################################################
+# SSH Key Generation Script
+# Author: R4yL
+# Description: Interactive setup for SSH key generation
+################################################################################
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+# Symbols
+CHECK="${GREEN}✓${NC}"
+CROSS="${RED}✗${NC}"
+INFO="${BLUE}ℹ${NC}"
+
+################################################################################
+# Helper Functions
+################################################################################
+
+print_header() {
+    echo -e "\n${BLUE}═══════════════════════════════════════════════════════${NC}"
+    echo -e "${BLUE}  $1${NC}"
+    echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}\n"
+}
+
+print_success() {
+    echo -e "${CHECK} $1"
+}
+
+print_error() {
+    echo -e "${CROSS} $1"
+}
+
+print_info() {
+    echo -e "${INFO} $1"
+}
+
+################################################################################
+# Main Setup
+################################################################################
+
+setup_ssh_key() {
+    print_header "SSH Key Generation"
+
+    # Check if SSH keys already exist
+    if [ -f "$HOME/.ssh/id_ed25519" ] || [ -f "$HOME/.ssh/id_rsa" ]; then
+        # Only ask if not called with --skip-confirmation
+        if [ "$1" != "--skip-confirmation" ]; then
+            echo -e "${YELLOW}SSH key already exists${NC}"
+
+            # Display the existing public key
+            if [ -f "$HOME/.ssh/id_ed25519.pub" ]; then
+                echo
+                print_info "Your current public SSH key (ed25519):"
+                echo
+                cat "$HOME/.ssh/id_ed25519.pub"
+                echo
+            elif [ -f "$HOME/.ssh/id_rsa.pub" ]; then
+                echo
+                print_info "Your current public SSH key (RSA):"
+                echo
+                cat "$HOME/.ssh/id_rsa.pub"
+                echo
+            fi
+
+            read -p "Do you want to generate a new SSH key? (y/N): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[OoYy]$ ]]; then
+                print_info "SSH key generation cancelled"
+                exit 2
+            fi
+        fi
+    fi
+
+    # Get email for the key
+    local ssh_email=""
+
+    # Try to get email from git config if available
+    if [ -f "$HOME/.gitconfig" ]; then
+        ssh_email=$(git config --global user.email 2>/dev/null || echo "")
+    fi
+
+    if [ -n "$ssh_email" ]; then
+        echo
+        read -p "Email for SSH key (default: $ssh_email): " input_email
+        if [ -n "$input_email" ]; then
+            ssh_email="$input_email"
+        fi
+    else
+        echo
+        read -p "Email for SSH key: " ssh_email
+    fi
+
+    # Validate email
+    while [ -z "$ssh_email" ] || [[ ! "$ssh_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; do
+        if [ -z "$ssh_email" ]; then
+            echo -e "${RED}Email cannot be empty${NC}"
+        else
+            echo -e "${RED}Invalid email format${NC}"
+        fi
+        read -p "Email for SSH key: " ssh_email
+    done
+
+    # Ask for passphrase
+    echo
+    print_info "Passphrase (press Enter for no passphrase):"
+    read -s -p "Enter passphrase: " passphrase
+    echo
+
+    # Create .ssh directory if it doesn't exist
+    mkdir -p "$HOME/.ssh"
+    chmod 700 "$HOME/.ssh"
+
+    # Backup existing key if any
+    if [ -f "$HOME/.ssh/id_ed25519" ]; then
+        local timestamp=$(date +"%Y%m%d_%H%M%S")
+        mv "$HOME/.ssh/id_ed25519" "$HOME/.ssh/id_ed25519.backup.$timestamp"
+        mv "$HOME/.ssh/id_ed25519.pub" "$HOME/.ssh/id_ed25519.pub.backup.$timestamp"
+        print_success "Existing key backed up"
+    fi
+
+    # Generate SSH key (ed25519 is more modern and secure)
+    print_info "Generating SSH key (ed25519)..."
+
+    if ssh-keygen -t ed25519 -C "$ssh_email" -f "$HOME/.ssh/id_ed25519" -N "$passphrase"; then
+        print_success "SSH key generated successfully"
+
+        # Start ssh-agent and add key
+        print_info "Adding key to ssh-agent..."
+        eval "$(ssh-agent -s)" > /dev/null 2>&1
+
+        if [ -n "$passphrase" ]; then
+            # If passphrase was set, we need to use expect or similar, or just skip auto-add
+            print_info "Key has a passphrase - you'll need to run 'ssh-add ~/.ssh/id_ed25519' manually"
+        else
+            ssh-add "$HOME/.ssh/id_ed25519" > /dev/null 2>&1
+            print_success "Key added to ssh-agent"
+        fi
+
+        echo
+        print_success "SSH key setup complete!"
+        echo
+        print_info "Email: $ssh_email"
+        if [ -n "$passphrase" ]; then
+            print_info "Passphrase: Set"
+        else
+            print_info "Passphrase: None"
+        fi
+
+        exit 0
+    else
+        print_error "Failed to generate SSH key"
+        exit 1
+    fi
+}
+
+################################################################################
+# Main Execution
+################################################################################
+
+main() {
+    clear
+
+    echo -e "${BLUE}"
+    echo "  ____ ____  _   _  "
+    echo " / ___/ ___|| | | | "
+    echo " \___ \___ \| |_| | "
+    echo "  ___) |__) |  _  | "
+    echo " |____/____/|_| |_| "
+    echo -e "${NC}"
+    echo -e "${BLUE}  Key Generator${NC}\n"
+
+    setup_ssh_key "$@"
+}
+
+main "$@"
