@@ -145,18 +145,21 @@ setup_git_config() {
         print_info "  Name: $git_name"
         print_info "  Email: $git_email"
 
-    # Interactive mode: ask user
+    # Interactive mode: ask user (use environment variables as defaults if provided)
     else
         echo
         print_info "Entrez vos informations Git"
         echo
 
+        # Determine default name: environment variable > current git config > none
+        local default_name="${GIT_NAME:-${current_name}}"
+
         # Ask for name with default value if it exists
-        if [ -n "$current_name" ]; then
-            read -p "Nom complet (default: $current_name): " git_name
-            # If empty, use current value
+        if [ -n "$default_name" ]; then
+            read -p "Nom complet (default: $default_name): " git_name
+            # If empty, use default value
             if [ -z "$git_name" ]; then
-                git_name="$current_name"
+                git_name="$default_name"
             fi
         else
             read -p "Nom complet (ex: John Doe): " git_name
@@ -166,20 +169,23 @@ setup_git_config() {
             done
         fi
 
+        # Determine default email: environment variables > current git config > none
+        local default_email="${GIT_EMAIL:-${EMAIL:-${current_email}}}"
+
         # Ask for email with default value if it exists
-        if [ -n "$current_email" ]; then
-            read -p "Email (default: $current_email): " git_email
-            # If empty, use current value
+        if [ -n "$default_email" ]; then
+            read -p "Email (default: $default_email): " git_email
+            # If empty, use default value
             if [ -z "$git_email" ]; then
-                git_email="$current_email"
+                git_email="$default_email"
             else
                 # Validate the new email
                 while [[ ! "$git_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; do
                     echo -e "${RED}Format d'email invalide${NC}"
-                    read -p "Email (default: $current_email): " git_email
+                    read -p "Email (default: $default_email): " git_email
                     # Allow user to press Enter to use default
                     if [ -z "$git_email" ]; then
-                        git_email="$current_email"
+                        git_email="$default_email"
                         break
                     fi
                 done

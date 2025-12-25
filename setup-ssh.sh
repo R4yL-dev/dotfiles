@@ -143,18 +143,22 @@ setup_ssh_key() {
         print_info "  Email: $ssh_email"
         print_info "  Passphrase: None (unattended mode)"
 
-    # Interactive mode: ask user
+    # Interactive mode: ask user (use environment variables as defaults if provided)
     else
-        # Try to get email from git config if available
+        # Determine default email: environment variables > git config > none
+        local git_config_email=""
         if [ -f "$HOME/.gitconfig" ]; then
-            ssh_email=$(git config --global user.email 2>/dev/null || echo "")
+            git_config_email=$(git config --global user.email 2>/dev/null || echo "")
         fi
+        local default_email="${SSH_EMAIL:-${EMAIL:-${git_config_email}}}"
 
-        if [ -n "$ssh_email" ]; then
+        if [ -n "$default_email" ]; then
             echo
-            read -p "Email for SSH key (default: $ssh_email): " input_email
+            read -p "Email for SSH key (default: $default_email): " input_email
             if [ -n "$input_email" ]; then
                 ssh_email="$input_email"
+            else
+                ssh_email="$default_email"
             fi
         else
             echo
