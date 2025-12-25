@@ -154,6 +154,13 @@ setup_ssh_key() {
             print_success "Key added to ssh-agent"
         fi
 
+        # Copy public key to clipboard if xclip is available
+        if command -v xclip &> /dev/null; then
+            if cat "$HOME/.ssh/id_ed25519.pub" | xclip -selection clipboard 2>/dev/null; then
+                print_success "Public key copied to clipboard"
+            fi
+        fi
+
         echo
         print_success "SSH key setup complete!"
         echo

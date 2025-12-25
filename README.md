@@ -195,6 +195,7 @@ Optional installation of frequently used tools:
 - **tldr**: Simplified man pages with practical examples (auto-updated after install)
 - **jq**: Command-line JSON processor
 - **curl**: Tool for transferring data with URLs
+- **xclip**: X clipboard manager (auto-copies SSH public key when generated)
 
 These tools are offered during installation - accept to install all, decline to skip.
 
@@ -206,11 +207,12 @@ Automatic SSH key generation for seamless GitHub/GitLab access:
 - **Email validation**: Regex validation like Git config
 - **Passphrase**: Optional (press Enter to skip)
 - **Email integration**: Uses Git email if configured
-- **Agent setup**: Automatically adds key to ssh-agent (if no passphrase)
+- **Agent setup**: Automatically adds key to ssh-agent (prompts for passphrase if set)
+- **Clipboard integration**: Auto-copies public key if xclip is installed
 - **GitHub ready**: Displays public key with instructions to add on GitHub
 - **Backup**: Existing keys are backed up before regeneration
 
-After generation, the public key is displayed in the final message. Simply copy it to GitHub Settings → SSH Keys.
+After generation, the public key is displayed in the final message. If xclip is installed, it's automatically copied to your clipboard. Simply paste it to GitHub Settings → SSH Keys.
 
 To regenerate or create a new key:
 ```bash

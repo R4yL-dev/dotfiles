@@ -441,9 +441,10 @@ install_essential_tools() {
         ["tldr"]="tldr"
         ["jq"]="jq"
         ["curl"]="curl"
+        ["xclip"]="xclip"
     )
 
-    local tools=("neovim" "tldr" "jq" "curl")
+    local tools=("neovim" "tldr" "jq" "curl" "xclip")
 
     # Display the list
     print_info "The following tools will be installed:"
