@@ -49,6 +49,11 @@ cd ~/dotfiles
 
 # 2. Run the bootstrap script
 ./bootstrap.sh
+
+# Optional: Run in verbose mode to see command output
+./bootstrap.sh -v
+# or
+./bootstrap.sh --verbose
 ```
 
 The script will automatically:
