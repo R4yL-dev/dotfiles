@@ -9,10 +9,15 @@
 set -e
 
 # Parse command line arguments
+VERBOSE=false
 UNATTENDED=false
 SKIP_CONFIRMATION=false
 while [[ $# -gt 0 ]]; do
     case $1 in
+        -v|--verbose)
+            VERBOSE=true
+            shift
+            ;;
         --unattended)
             UNATTENDED=true
             shift
@@ -23,7 +28,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--unattended] [--skip-confirmation]"
+            echo "Usage: $0 [-v|--verbose] [--unattended] [--skip-confirmation]"
             exit 1
             ;;
     esac
@@ -61,6 +66,18 @@ print_error() {
 
 print_info() {
     echo -e "${INFO} $1"
+}
+
+print_warn() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
+
+run_cmd() {
+    if [ "$VERBOSE" = true ]; then
+        "$@"
+    else
+        "$@" &> /dev/null
+    fi
 }
 
 backup_file() {
@@ -112,13 +129,10 @@ setup_git_config() {
     fi
 
     # Check if git config already exists and read current values
-    local config_exists=false
     local current_name=""
     local current_email=""
 
     if [ -f "$HOME/.gitconfig" ] || [ -L "$HOME/.gitconfig" ]; then
-        config_exists=true
-
         # Read current values BEFORE any modification
         current_name=$(git config --global user.name 2>/dev/null || echo "")
         current_email=$(git config --global user.email 2>/dev/null || echo "")
@@ -246,7 +260,7 @@ setup_git_config() {
     rm -f "$HOME/.gitconfig"
 
     cd "$SCRIPT_DIR"
-    if stow -t "$HOME" git; then
+    if run_cmd stow -t "$HOME" git; then
         print_success "Git configuration deployed"
         print_info "  ~/.gitconfig → $TARGET_FILE"
         echo
@@ -268,7 +282,10 @@ setup_git_config() {
 ################################################################################
 
 main() {
-    clear
+    # Only clear screen if no flags were passed (preserve history when automated)
+    if [ "$VERBOSE" = false ] && [ "$UNATTENDED" = false ] && [ "$SKIP_CONFIRMATION" = false ]; then
+        clear
+    fi
 
     echo -e "${BLUE}"
     echo "   ____ _ _    "

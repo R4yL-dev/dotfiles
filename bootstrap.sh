@@ -46,6 +46,11 @@ while [[ $# -gt 0 ]]; do
                 echo "Error: --git-name requires a value"
                 exit 1
             fi
+            # Check if value is only whitespace
+            if [[ "$2" =~ ^[[:space:]]*$ ]]; then
+                echo "Error: --git-name cannot be only whitespace"
+                exit 1
+            fi
             export GIT_NAME="$2"
             shift 2
             ;;
@@ -88,8 +93,13 @@ done
 # Validate Environment Variables
 ################################################################################
 
-# Validate email environment variables if they were set (not from CLI args)
-# This catches emails set via: EMAIL="test@mail" ./bootstrap.sh
+# Validate environment variables if they were set (not from CLI args)
+# This catches variables set via: GIT_NAME="test" EMAIL="test@mail" ./bootstrap.sh
+if [[ -n "$GIT_NAME" ]] && [[ "$GIT_NAME" =~ ^[[:space:]]*$ ]]; then
+    echo "Error: GIT_NAME environment variable cannot be only whitespace"
+    exit 1
+fi
+
 if [[ -n "$EMAIL" ]]; then
     validate_email "$EMAIL" "EMAIL (environment variable)"
 fi
@@ -386,7 +396,6 @@ install_cascadia_font() {
 backup_configs() {
     print_header "Backing Up Existing Configurations"
 
-    local timestamp=$(date +"%Y%m%d_%H%M%S")
     local backed_up=0
 
     for config in "$HOME/.zshrc" "$HOME/.tmux.conf"; do
@@ -466,7 +475,7 @@ install_zinit() {
         print_skip "Zinit already installed"
         if [ "$UNATTENDED" = true ]; then
             # Unattended mode: skip update prompt
-            print_info "Unattended mode: skipping Zinit update"
+            print_info "Skipping Zinit update"
         else
             # Interactive mode: ask user
             read -p "Do you want to update Zinit? (y/N): " -n 1 -r
@@ -501,7 +510,7 @@ install_tpm() {
         print_skip "TPM already installed"
         if [ "$UNATTENDED" = true ]; then
             # Unattended mode: skip update prompt
-            print_info "Unattended mode: skipping TPM update"
+            print_info "Skipping TPM update"
         else
             # Interactive mode: ask user
             read -p "Do you want to update TPM? (y/N): " -n 1 -r
@@ -648,7 +657,7 @@ install_essential_tools() {
 
     if [ "$UNATTENDED" = true ]; then
         # Unattended mode: install automatically
-        print_info "Unattended mode: installing automatically..."
+        print_info "Installing automatically..."
     else
         # Interactive mode: ask user
         read -p "Do you want to install these tools? (Y/n): " -n 1 -r
@@ -705,7 +714,11 @@ setup_git_prompt() {
         # Variables are set, configure Git
         print_info "Configuring Git with environment variables..."
         if [ -x "$SCRIPT_DIR/setup-git.sh" ]; then
-            "$SCRIPT_DIR/setup-git.sh" --skip-confirmation --unattended
+            if [ "$VERBOSE" = true ]; then
+                "$SCRIPT_DIR/setup-git.sh" --skip-confirmation --unattended -v
+            else
+                "$SCRIPT_DIR/setup-git.sh" --skip-confirmation --unattended
+            fi
             local git_exit_code=$?
 
             if [ $git_exit_code -eq 0 ]; then
@@ -899,12 +912,13 @@ setup_ssh_key() {
 ################################################################################
 
 print_final_message() {
-    # Check if anything was actually done
+    # Check if anything was actually done (including skipped sections)
     local anything_changed=false
     if [ "$CONFIGS_DEPLOYED" = true ] || [ "$KITTY_CONFIGURED" = true ] || \
-       [ "$GIT_CONFIGURED" = true ] || [ "$ZINIT_CHANGED" = true ] || \
-       [ "$TPM_CHANGED" = true ] || [ "$SHELL_CHANGED" = true ] || \
-       [ "$TOOLS_INSTALLED" = true ] || [ "$SSH_KEY_GENERATED" = true ]; then
+       [ "$GIT_CONFIGURED" = true ] || [ "$GIT_SKIPPED" = true ] || \
+       [ "$ZINIT_CHANGED" = true ] || [ "$TPM_CHANGED" = true ] || \
+       [ "$SHELL_CHANGED" = true ] || [ "$TOOLS_INSTALLED" = true ] || \
+       [ "$SSH_KEY_GENERATED" = true ] || [ "$SSH_SKIPPED" = true ]; then
         anything_changed=true
     fi
 
@@ -1089,7 +1103,10 @@ print_final_message() {
 ################################################################################
 
 main() {
-    clear
+    # Only clear screen if no flags were passed (preserve history when automated)
+    if [ "$VERBOSE" = false ] && [ "$UNATTENDED" = false ]; then
+        clear
+    fi
 
     echo -e "${BLUE}"
     echo "  ____        _    __ _ _            "

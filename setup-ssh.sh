@@ -271,7 +271,10 @@ setup_ssh_key() {
 ################################################################################
 
 main() {
-    clear
+    # Only clear screen if no flags were passed (preserve history when automated)
+    if [ "$VERBOSE" = false ] && [ "$UNATTENDED" = false ] && [ "$SKIP_CONFIRMATION" = false ]; then
+        clear
+    fi
 
     echo -e "${BLUE}"
     echo "  ____ ____  _   _  "
