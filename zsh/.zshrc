@@ -63,7 +63,6 @@ zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
 export WINE="/usr/bin/wine"
 export WINETRICKS="/usr/bin/winetricks"
 export PATH=$PATH:/usr/local/go/bin
-export PATH=$PATH:/home/luca/go/bin
 
 # Alias
 alias ls='ls --color'
