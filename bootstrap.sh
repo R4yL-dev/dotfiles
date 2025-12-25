@@ -11,10 +11,15 @@ set -e  # Exit on error
 
 # Parse command line arguments
 VERBOSE=false
+UNATTENDED=false
 for arg in "$@"; do
     case $arg in
         -v|--verbose)
             VERBOSE=true
+            shift
+            ;;
+        -y|--yes)
+            UNATTENDED=true
             shift
             ;;
     esac
@@ -193,24 +198,33 @@ install_kitty() {
         print_skip "Kitty is already installed"
         KITTY_INSTALLED=true
     else
-        print_info "Kitty is not installed"
-        echo
-        print_info "Kitty is the recommended terminal emulator for this configuration"
-        print_info "  - Integrated Dracula theme"
-        print_info "  - CascadiaCode font"
-        print_info "  - Zsh shell by default"
-        echo
-        read -p "Do you want to install Kitty? (Y/n): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+        if [ "$UNATTENDED" = true ]; then
+            # Unattended mode: install Kitty automatically
             print_info "Installing Kitty..."
             run_cmd $INSTALL_CMD kitty
             KITTY_INSTALLED=true
             print_success "Kitty installed"
         else
-            KITTY_INSTALLED=false
-            print_info "Kitty installation skipped"
-            print_warn "Default shell will be configured but some terminals may ignore it"
+            # Interactive mode: ask user
+            print_info "Kitty is not installed"
+            echo
+            print_info "Kitty is the recommended terminal emulator for this configuration"
+            print_info "  - Integrated Dracula theme"
+            print_info "  - CascadiaCode font"
+            print_info "  - Zsh shell by default"
+            echo
+            read -p "Do you want to install Kitty? (Y/n): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+                print_info "Installing Kitty..."
+                run_cmd $INSTALL_CMD kitty
+                KITTY_INSTALLED=true
+                print_success "Kitty installed"
+            else
+                KITTY_INSTALLED=false
+                print_info "Kitty installation skipped"
+                print_warn "Default shell will be configured but some terminals may ignore it"
+            fi
         fi
     fi
 }
@@ -371,13 +385,19 @@ install_zinit() {
 
     if [ -d "$ZINIT_HOME" ]; then
         print_skip "Zinit already installed"
-        read -p "Do you want to update Zinit? (y/N): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[OoYy]$ ]]; then
-            cd "$ZINIT_HOME"
-            run_cmd git pull
-            print_success "Zinit updated"
-            ZINIT_CHANGED=true
+        if [ "$UNATTENDED" = true ]; then
+            # Unattended mode: skip update prompt
+            print_info "Unattended mode: skipping Zinit update"
+        else
+            # Interactive mode: ask user
+            read -p "Do you want to update Zinit? (y/N): " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[OoYy]$ ]]; then
+                cd "$ZINIT_HOME"
+                run_cmd git pull
+                print_success "Zinit updated"
+                ZINIT_CHANGED=true
+            fi
         fi
     else
         print_info "Cloning Zinit..."
@@ -400,19 +420,25 @@ install_tpm() {
 
     if [ -d "$TPM_HOME" ]; then
         print_skip "TPM already installed"
-        read -p "Do you want to update TPM? (y/N): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[OoYy]$ ]]; then
-            cd "$TPM_HOME"
-            run_cmd git pull
-            print_success "TPM updated"
-            TPM_CHANGED=true
+        if [ "$UNATTENDED" = true ]; then
+            # Unattended mode: skip update prompt
+            print_info "Unattended mode: skipping TPM update"
+        else
+            # Interactive mode: ask user
+            read -p "Do you want to update TPM? (y/N): " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[OoYy]$ ]]; then
+                cd "$TPM_HOME"
+                run_cmd git pull
+                print_success "TPM updated"
+                TPM_CHANGED=true
 
-            # Install/update plugins automatically
-            if [ -f "$TPM_HOME/bin/install_plugins" ]; then
-                print_info "Updating tmux plugins..."
-                run_cmd "$TPM_HOME/bin/install_plugins"
-                print_success "Tmux plugins updated"
+                # Install/update plugins automatically
+                if [ -f "$TPM_HOME/bin/install_plugins" ]; then
+                    print_info "Updating tmux plugins..."
+                    run_cmd "$TPM_HOME/bin/install_plugins"
+                    print_success "Tmux plugins updated"
+                fi
             fi
         fi
     else
@@ -541,11 +567,17 @@ install_essential_tools() {
     done
     echo
 
-    read -p "Do you want to install these tools? (Y/n): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Nn]$ ]]; then
-        print_info "Essential tools installation skipped"
-        return
+    if [ "$UNATTENDED" = true ]; then
+        # Unattended mode: install automatically
+        print_info "Unattended mode: installing automatically..."
+    else
+        # Interactive mode: ask user
+        read -p "Do you want to install these tools? (Y/n): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Nn]$ ]]; then
+            print_info "Essential tools installation skipped"
+            return
+        fi
     fi
 
     # Refresh sudo cache before installation
@@ -579,6 +611,34 @@ install_essential_tools() {
 setup_git_prompt() {
     print_header "Git Configuration (optional)"
 
+    # Unattended mode: check environment variables
+    if [ "$UNATTENDED" = true ]; then
+        # Check if required environment variables are set
+        if [ -z "$GIT_NAME" ] || [ -z "$EMAIL" ]; then
+            print_info "Unattended mode: skipping Git configuration (GIT_NAME or EMAIL not set)"
+            print_info "To configure Git in unattended mode, set: GIT_NAME and EMAIL"
+            print_info "Optional: GIT_EMAIL (defaults to EMAIL if not set)"
+            return
+        fi
+
+        # Variables are set, configure Git
+        print_info "Unattended mode: configuring Git with environment variables..."
+        if [ -x "$SCRIPT_DIR/setup-git.sh" ]; then
+            "$SCRIPT_DIR/setup-git.sh" --skip-confirmation --unattended
+            local git_exit_code=$?
+
+            if [ $git_exit_code -eq 0 ]; then
+                GIT_CONFIGURED=true
+            else
+                print_error "Git configuration failed"
+            fi
+        else
+            print_error "setup-git.sh not found or not executable"
+        fi
+        return
+    fi
+
+    # Interactive mode
     # Case 1: Symlink exists (already managed by dotfiles)
     if [ -L "$HOME/.gitconfig" ]; then
         print_skip "Git already managed by dotfiles"
@@ -649,6 +709,44 @@ setup_git_prompt() {
 setup_ssh_key() {
     print_header "SSH Key Generation (optional)"
 
+    # Unattended mode: check environment variables
+    if [ "$UNATTENDED" = true ]; then
+        # Check if required environment variable is set
+        if [ -z "$EMAIL" ]; then
+            print_info "Unattended mode: skipping SSH key generation (EMAIL not set)"
+            print_info "To generate SSH key in unattended mode, set: EMAIL"
+            print_info "Optional: SSH_EMAIL (defaults to EMAIL if not set)"
+            return
+        fi
+
+        # Check if SSH key already exists
+        if [ -f "$HOME/.ssh/id_ed25519" ] || [ -f "$HOME/.ssh/id_rsa" ]; then
+            print_skip "SSH key already exists, skipping generation in unattended mode"
+            return
+        fi
+
+        # Generate SSH key
+        print_info "Unattended mode: generating SSH key with environment variables..."
+        if [ -x "$SCRIPT_DIR/setup-ssh.sh" ]; then
+            if [ "$VERBOSE" = true ]; then
+                "$SCRIPT_DIR/setup-ssh.sh" --skip-confirmation --unattended -v
+            else
+                "$SCRIPT_DIR/setup-ssh.sh" --skip-confirmation --unattended
+            fi
+            local ssh_exit_code=$?
+
+            if [ $ssh_exit_code -eq 0 ]; then
+                SSH_KEY_GENERATED=true
+            else
+                print_error "SSH key generation failed"
+            fi
+        else
+            print_error "setup-ssh.sh not found or not executable"
+        fi
+        return
+    fi
+
+    # Interactive mode
     # Case 1: SSH key already exists
     if [ -f "$HOME/.ssh/id_ed25519" ] || [ -f "$HOME/.ssh/id_rsa" ]; then
         print_skip "SSH key already exists"

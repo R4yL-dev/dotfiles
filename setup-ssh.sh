@@ -10,10 +10,14 @@ set -e
 
 # Parse command line arguments
 VERBOSE=false
+UNATTENDED=false
 for arg in "$@"; do
     case $arg in
         -v|--verbose)
             VERBOSE=true
+            ;;
+        --unattended)
+            UNATTENDED=true
             ;;
     esac
 done
@@ -121,38 +125,58 @@ setup_ssh_key() {
 
     # Get email for the key
     local ssh_email=""
+    local passphrase=""
 
-    # Try to get email from git config if available
-    if [ -f "$HOME/.gitconfig" ]; then
-        ssh_email=$(git config --global user.email 2>/dev/null || echo "")
-    fi
+    # Unattended mode: use environment variables
+    if [ "$UNATTENDED" = true ]; then
+        # Use environment variables with fallback pattern
+        ssh_email="${SSH_EMAIL:-${EMAIL}}"
+        passphrase=""  # No passphrase in unattended mode
 
-    if [ -n "$ssh_email" ]; then
-        echo
-        read -p "Email for SSH key (default: $ssh_email): " input_email
-        if [ -n "$input_email" ]; then
-            ssh_email="$input_email"
+        # Validate email format
+        if [[ ! "$ssh_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+            print_error "Invalid email format in environment variable: $ssh_email"
+            exit 1
         fi
+
+        print_info "Using environment variables:"
+        print_info "  Email: $ssh_email"
+        print_info "  Passphrase: None (unattended mode)"
+
+    # Interactive mode: ask user
     else
-        echo
-        read -p "Email for SSH key: " ssh_email
-    fi
-
-    # Validate email
-    while [ -z "$ssh_email" ] || [[ ! "$ssh_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; do
-        if [ -z "$ssh_email" ]; then
-            echo -e "${RED}Email cannot be empty${NC}"
-        else
-            echo -e "${RED}Invalid email format${NC}"
+        # Try to get email from git config if available
+        if [ -f "$HOME/.gitconfig" ]; then
+            ssh_email=$(git config --global user.email 2>/dev/null || echo "")
         fi
-        read -p "Email for SSH key: " ssh_email
-    done
 
-    # Ask for passphrase
-    echo
-    print_info "Passphrase (press Enter for no passphrase):"
-    read -s -p "Enter passphrase: " passphrase
-    echo
+        if [ -n "$ssh_email" ]; then
+            echo
+            read -p "Email for SSH key (default: $ssh_email): " input_email
+            if [ -n "$input_email" ]; then
+                ssh_email="$input_email"
+            fi
+        else
+            echo
+            read -p "Email for SSH key: " ssh_email
+        fi
+
+        # Validate email
+        while [ -z "$ssh_email" ] || [[ ! "$ssh_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; do
+            if [ -z "$ssh_email" ]; then
+                echo -e "${RED}Email cannot be empty${NC}"
+            else
+                echo -e "${RED}Invalid email format${NC}"
+            fi
+            read -p "Email for SSH key: " ssh_email
+        done
+
+        # Ask for passphrase
+        echo
+        print_info "Passphrase (press Enter for no passphrase):"
+        read -s -p "Enter passphrase: " passphrase
+        echo
+    fi
 
     # Create .ssh directory if it doesn't exist
     mkdir -p "$HOME/.ssh"
