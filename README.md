@@ -63,7 +63,8 @@ The script will automatically:
 9. ✅ Install TPM (Tmux plugin manager)
 10. ✅ **Install Tmux plugins automatically**
 11. ✅ Configure default shell (zsh)
-12. ✅ **Offer to configure Git** (name, email, aliases)
+12. ✅ **Offer to install essential tools** (neovim, tldr)
+13. ✅ **Offer to configure Git** (name, email, aliases)
 
 ### Updating Configuration
 
@@ -184,6 +185,16 @@ After installation, the following symlinks are created:
 - **Auto-coloring**: Enabled for all git commands
 - **Default branch**: `main`
 - **Reconfigurable**: Run `./setup-git.sh` anytime to update your configuration
+
+### Essential Tools
+
+Optional installation of frequently used tools:
+- **neovim**: Modern, extensible text editor
+- **tldr**: Simplified man pages with practical examples
+- **jq**: Command-line JSON processor
+- **curl**: Tool for transferring data with URLs
+
+These tools are offered during installation - accept to install all, decline to skip.
 
 ## 🎨 Customization
 

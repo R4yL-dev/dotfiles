@@ -38,6 +38,7 @@ ZINIT_INSTALLED=false  # New installation (not update)
 TPM_CHANGED=false
 TPM_INSTALLED=false    # New installation (not update)
 SHELL_CHANGED=false
+TOOLS_INSTALLED=false  # Essential tools installed
 BACKUPS_CREATED=false
 declare -a BACKUPS_LIST
 
@@ -427,6 +428,67 @@ change_default_shell() {
 }
 
 ################################################################################
+# Install Essential Tools (Optional)
+################################################################################
+
+install_essential_tools() {
+    print_header "Essential Tools Installation (optional)"
+
+    # Map of package names to command names
+    declare -A tool_commands=(
+        ["neovim"]="nvim"
+        ["tldr"]="tldr"
+        ["jq"]="jq"
+        ["curl"]="curl"
+    )
+
+    local tools=("neovim" "tldr" "jq" "curl")
+
+    # Display the list
+    print_info "The following tools will be installed:"
+    for tool in "${tools[@]}"; do
+        echo -e "   ${INFO} $tool"
+    done
+    echo
+
+    read -p "Do you want to install these tools? (Y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Nn]$ ]]; then
+        print_info "Essential tools installation skipped"
+        return
+    fi
+
+    # Install all tools
+    print_info "Installing essential tools..."
+
+    local to_install=()
+
+    # Check which tools need to be installed
+    for tool in "${tools[@]}"; do
+        local cmd="${tool_commands[$tool]}"
+        if command -v "$cmd" &> /dev/null; then
+            print_skip "$tool already installed"
+        else
+            to_install+=("$tool")
+        fi
+    done
+
+    # Install missing tools
+    if [ ${#to_install[@]} -gt 0 ]; then
+        print_info "Installing: ${to_install[*]}"
+
+        if $INSTALL_CMD "${to_install[@]}"; then
+            print_success "Essential tools installed successfully"
+            TOOLS_INSTALLED=true
+        else
+            print_error "Failed to install some tools"
+        fi
+    else
+        print_skip "All essential tools are already installed"
+    fi
+}
+
+################################################################################
 # Setup Git Configuration (Optional)
 ################################################################################
 
@@ -505,7 +567,8 @@ print_final_message() {
     local anything_changed=false
     if [ "$CONFIGS_DEPLOYED" = true ] || [ "$KITTY_CONFIGURED" = true ] || \
        [ "$GIT_CONFIGURED" = true ] || [ "$ZINIT_CHANGED" = true ] || \
-       [ "$TPM_CHANGED" = true ] || [ "$SHELL_CHANGED" = true ]; then
+       [ "$TPM_CHANGED" = true ] || [ "$SHELL_CHANGED" = true ] || \
+       [ "$TOOLS_INSTALLED" = true ]; then
         anything_changed=true
     fi
 
@@ -618,6 +681,11 @@ print_final_message() {
         something_shown=true
     fi
 
+    if [ "$TOOLS_INSTALLED" = true ]; then
+        echo -e "   ${CHECK} Essential tools installed (neovim, tldr, jq, curl)"
+        something_shown=true
+    fi
+
     if [ "$something_shown" = false ]; then
         echo -e "   ${INFO} Everything was already configured"
     fi
@@ -652,6 +720,7 @@ main() {
     install_tpm
     install_plugins
     change_default_shell
+    install_essential_tools
     setup_git_prompt
     print_final_message
 }
