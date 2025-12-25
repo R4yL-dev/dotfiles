@@ -77,10 +77,17 @@ setup_git_config() {
         exit 1
     fi
 
-    # Check if git config already exists
+    # Check if git config already exists and read current values
     local config_exists=false
+    local current_name=""
+    local current_email=""
+
     if [ -f "$HOME/.gitconfig" ] || [ -L "$HOME/.gitconfig" ]; then
         config_exists=true
+
+        # Read current values BEFORE any modification
+        current_name=$(git config --global user.name 2>/dev/null || echo "")
+        current_email=$(git config --global user.email 2>/dev/null || echo "")
 
         # Only ask if not called with --skip-confirmation
         if [ "$1" != "--skip-confirmation" ]; then
@@ -112,21 +119,52 @@ setup_git_config() {
     print_info "Entrez vos informations Git"
     echo
 
-    read -p "Nom complet (ex: John Doe): " git_name
-    while [ -z "$git_name" ]; do
-        echo -e "${RED}Le nom ne peut pas être vide${NC}"
-        read -p "Nom complet (ex: John Doe): " git_name
-    done
-
-    read -p "Email (ex: john@example.com): " git_email
-    while [ -z "$git_email" ] || [[ ! "$git_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; do
-        if [ -z "$git_email" ]; then
-            echo -e "${RED}L'email ne peut pas être vide${NC}"
-        else
-            echo -e "${RED}Format d'email invalide${NC}"
+    # Ask for name with default value if it exists
+    local git_name=""
+    if [ -n "$current_name" ]; then
+        read -p "Nom complet (default: $current_name): " git_name
+        # If empty, use current value
+        if [ -z "$git_name" ]; then
+            git_name="$current_name"
         fi
+    else
+        read -p "Nom complet (ex: John Doe): " git_name
+        while [ -z "$git_name" ]; do
+            echo -e "${RED}Le nom ne peut pas être vide${NC}"
+            read -p "Nom complet (ex: John Doe): " git_name
+        done
+    fi
+
+    # Ask for email with default value if it exists
+    local git_email=""
+    if [ -n "$current_email" ]; then
+        read -p "Email (default: $current_email): " git_email
+        # If empty, use current value
+        if [ -z "$git_email" ]; then
+            git_email="$current_email"
+        else
+            # Validate the new email
+            while [[ ! "$git_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; do
+                echo -e "${RED}Format d'email invalide${NC}"
+                read -p "Email (default: $current_email): " git_email
+                # Allow user to press Enter to use default
+                if [ -z "$git_email" ]; then
+                    git_email="$current_email"
+                    break
+                fi
+            done
+        fi
+    else
         read -p "Email (ex: john@example.com): " git_email
-    done
+        while [ -z "$git_email" ] || [[ ! "$git_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; do
+            if [ -z "$git_email" ]; then
+                echo -e "${RED}L'email ne peut pas être vide${NC}"
+            else
+                echo -e "${RED}Format d'email invalide${NC}"
+            fi
+            read -p "Email (ex: john@example.com): " git_email
+        done
+    fi
 
     # Generate gitconfig from template
     print_info "Génération de la configuration..."
