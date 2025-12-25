@@ -480,6 +480,16 @@ install_essential_tools() {
         if $INSTALL_CMD "${to_install[@]}"; then
             print_success "Essential tools installed successfully"
             TOOLS_INSTALLED=true
+
+            # Post-installation: Update tldr cache if tldr was just installed
+            if [[ " ${to_install[@]} " =~ " tldr " ]]; then
+                print_info "Updating tldr database..."
+                if tldr -u &> /dev/null; then
+                    print_success "tldr database updated"
+                else
+                    print_warn "Failed to update tldr database (you can run 'tldr -u' manually later)"
+                fi
+            fi
         else
             print_error "Failed to install some tools"
         fi
