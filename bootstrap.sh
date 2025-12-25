@@ -453,6 +453,9 @@ install_plugins() {
 change_default_shell() {
     print_header "Configuring Default Shell"
 
+    # Refresh sudo cache in case it expired during interactive prompts
+    sudo -v &>/dev/null || true
+
     CURRENT_SHELL=$(getent passwd "$USER" | cut -d: -f7)
 
     if [ "$CURRENT_SHELL" = "/bin/zsh" ] || [ "$CURRENT_SHELL" = "/usr/bin/zsh" ]; then
@@ -544,6 +547,9 @@ install_essential_tools() {
         print_info "Essential tools installation skipped"
         return
     fi
+
+    # Refresh sudo cache before installation
+    sudo -v &>/dev/null || true
 
     # Install missing tools
     print_info "Installing: ${to_install[*]}"
@@ -876,6 +882,10 @@ main() {
     echo " |____/ \___/ \__|_| |_|_|\___||___/ "
     echo -e "${NC}"
     echo -e "${BLUE}  Automated Installation - Zsh & Tmux${NC}\n"
+
+    # Request sudo access upfront to avoid timeout during interactive prompts
+    print_info "This script requires sudo privileges for package installation and shell configuration"
+    sudo -v || { print_error "Sudo access required"; exit 1; }
 
     detect_package_manager
     install_packages
