@@ -69,7 +69,8 @@ setup_git_config() {
 
     # Get script directory
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    TEMPLATE_FILE="$SCRIPT_DIR/git/.gitconfig"
+    TEMPLATE_FILE="$SCRIPT_DIR/templates/gitconfig"
+    TARGET_FILE="$SCRIPT_DIR/git/.gitconfig"
 
     if [ ! -f "$TEMPLATE_FILE" ]; then
         print_error "Template file not found: $TEMPLATE_FILE"
@@ -132,7 +133,7 @@ setup_git_config() {
 
     sed -e "s/__GIT_USER_NAME__/$git_name/" \
         -e "s/__GIT_USER_EMAIL__/$git_email/" \
-        "$TEMPLATE_FILE" > "$SCRIPT_DIR/git/.gitconfig.generated"
+        "$TEMPLATE_FILE" > "$TARGET_FILE"
 
     # Deploy with stow
     print_info "Déploiement avec stow..."
@@ -140,14 +141,10 @@ setup_git_config() {
     # Remove existing file/symlink if any
     rm -f "$HOME/.gitconfig"
 
-    # Replace template with generated file temporarily
-    mv "$TEMPLATE_FILE" "$TEMPLATE_FILE.bak"
-    mv "$SCRIPT_DIR/git/.gitconfig.generated" "$TEMPLATE_FILE"
-
     cd "$SCRIPT_DIR"
     if stow -t "$HOME" git; then
         print_success "Configuration Git déployée"
-        print_info "  ~/.gitconfig → $SCRIPT_DIR/git/.gitconfig"
+        print_info "  ~/.gitconfig → $TARGET_FILE"
         echo
         print_success "Configuration terminée !"
         echo
@@ -155,14 +152,9 @@ setup_git_config() {
         print_info "Email: $git_email"
         echo
         print_info "Aliases disponibles: git st, git co, git br, git ci, git lg"
-
-        # Remove backup since deployment succeeded
-        rm -f "$TEMPLATE_FILE.bak"
         exit 0
     else
         print_error "Erreur lors du déploiement"
-        # Restore template on error
-        mv "$TEMPLATE_FILE.bak" "$TEMPLATE_FILE"
         exit 1
     fi
 }

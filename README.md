@@ -94,12 +94,14 @@ dotfiles/
 ├── setup-git.sh            # Git configuration generator
 ├── setup-ssh.sh            # SSH key generator
 ├── README.md               # This documentation
+├── templates/
+│   └── gitconfig          # Git configuration template (with placeholders)
 ├── zsh/
 │   └── .zshrc             # Zsh configuration
 ├── tmux/
 │   └── .tmux.conf         # Tmux configuration
 ├── git/
-│   └── .gitconfig         # Git configuration template
+│   └── .gitconfig         # Git configuration (generated from template)
 └── kitty/
     └── .config/
         └── kitty/
