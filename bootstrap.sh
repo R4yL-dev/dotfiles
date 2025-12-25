@@ -386,6 +386,13 @@ install_zinit() {
         print_success "Zinit installed"
         ZINIT_CHANGED=true
         ZINIT_INSTALLED=true  # First time installation
+
+        # Pre-load zsh to let Zinit download plugins in background
+        if [ -f "$HOME/.zshrc" ]; then
+            print_info "Pre-loading Zinit plugins..."
+            run_cmd zsh -c "exit"
+            print_success "Zinit plugins downloaded"
+        fi
     fi
 }
 
