@@ -709,11 +709,7 @@ print_final_message() {
 
     # Show SSH key if it was just generated
     if [ "$SSH_KEY_GENERATED" = true ]; then
-        echo -e "${GREEN}╔════════════════════════════════════════════════════════╗${NC}"
-        echo -e "${GREEN}║                                                        ║${NC}"
-        echo -e "${GREEN}║           Your SSH Public Key (copy this!)             ║${NC}"
-        echo -e "${GREEN}║                                                        ║${NC}"
-        echo -e "${GREEN}╚════════════════════════════════════════════════════════╝${NC}"
+        echo -e "${YELLOW}🔑 Your SSH Public Key (copy this):${NC}"
         echo
         cat "$HOME/.ssh/id_ed25519.pub"
         echo
