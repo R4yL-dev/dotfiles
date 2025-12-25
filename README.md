@@ -20,6 +20,7 @@ This project contains my personal configurations for:
 - **Zsh** with [Zinit](https://github.com/zdharma-continuum/zinit) (plugin manager)
 - **Tmux** with [TPM](https://github.com/tmux-plugins/tpm) (Tmux Plugin Manager)
 - **Kitty** (modern terminal emulator) with Dracula theme
+- **Git** with custom aliases and configuration
 
 The bootstrap script fully automates configuration deployment using [GNU Stow](https://www.gnu.org/software/stow/) to manage symlinks.
 
@@ -62,6 +63,7 @@ The script will automatically:
 9. ✅ Install TPM (Tmux plugin manager)
 10. ✅ **Install Tmux plugins automatically**
 11. ✅ Configure default shell (zsh)
+12. ✅ **Offer to configure Git** (name, email, aliases)
 
 ### Updating Configuration
 
@@ -86,11 +88,14 @@ git pull  # Get latest changes
 ```
 dotfiles/
 ├── bootstrap.sh            # Bootstrap script (installation & update)
+├── setup-git.sh            # Git configuration generator
 ├── README.md               # This documentation
 ├── zsh/
 │   └── .zshrc             # Zsh configuration
 ├── tmux/
 │   └── .tmux.conf         # Tmux configuration
+├── git/
+│   └── .gitconfig         # Git configuration template
 └── kitty/
     └── .config/
         └── kitty/
@@ -102,6 +107,7 @@ After installation, the following symlinks are created:
 ```
 ~/.zshrc → <path-to-dotfiles>/zsh/.zshrc
 ~/.tmux.conf → <path-to-dotfiles>/tmux/.tmux.conf
+~/.gitconfig → <path-to-dotfiles>/git/.gitconfig (if configured)
 ~/.config/kitty/kitty.conf → <path-to-dotfiles>/kitty/.config/kitty/kitty.conf
 ~/.config/kitty/dracula.conf → <path-to-dotfiles>/kitty/.config/kitty/dracula.conf
 ```
@@ -166,6 +172,19 @@ After installation, the following symlinks are created:
 - **Status bar**: Positioned at the top of the screen
 - **Colors**: 256 colors and RGB support
 
+### Git
+
+- **Interactive setup**: Configure your name and email during installation
+- **Useful aliases**:
+  - `git st` → `git status`
+  - `git co` → `git checkout`
+  - `git br` → `git branch`
+  - `git ci` → `git commit`
+  - `git lg` → Pretty log with graph
+- **Auto-coloring**: Enabled for all git commands
+- **Default branch**: `main`
+- **Reconfigurable**: Run `./setup-git.sh` anytime to update your configuration
+
 ## 🎨 Customization
 
 ### Modifying Configurations
@@ -229,16 +248,37 @@ font_size 14.0
 include my-theme.conf
 ```
 
+### Customizing Git
+
+To reconfigure Git (change name, email):
+
+```bash
+./setup-git.sh
+```
+
+To add more aliases or settings, edit `git/.gitconfig` template:
+
+```bash
+vim ~/dotfiles/git/.gitconfig
+```
+
+Then regenerate your config:
+
+```bash
+./setup-git.sh
+```
+
 ## 🗑️ Uninstallation
 
 ```bash
 # 1. Remove symlinks
-rm ~/.zshrc ~/.tmux.conf
+rm ~/.zshrc ~/.tmux.conf ~/.gitconfig
 rm -rf ~/.config/kitty
 
 # 2. Restore backups (if needed)
 cp ~/.zshrc.backup.YYYYMMDD_HHMMSS ~/.zshrc
 cp ~/.tmux.conf.backup.YYYYMMDD_HHMMSS ~/.tmux.conf
+cp ~/.gitconfig.backup.YYYYMMDD_HHMMSS ~/.gitconfig
 cp -r ~/.config/kitty.backup.YYYYMMDD_HHMMSS ~/.config/kitty
 
 # 3. Remove plugin managers (optional)

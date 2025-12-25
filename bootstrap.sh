@@ -382,6 +382,47 @@ change_default_shell() {
 }
 
 ################################################################################
+# Setup Git Configuration (Optional)
+################################################################################
+
+setup_git_prompt() {
+    print_header "Git Configuration (optional)"
+
+    if [ -L "$HOME/.gitconfig" ]; then
+        print_skip "Git configuration already deployed"
+        read -p "Do you want to reconfigure Git? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[OoYy]$ ]]; then
+            print_info "Git configuration skipped"
+            return
+        fi
+    else
+        print_info "Git is not yet configured"
+        echo
+        print_info "The setup-git.sh script will help you configure:"
+        print_info "  - Your name and email"
+        print_info "  - Basic aliases (st, co, br, ci, lg)"
+        print_info "  - Color settings"
+        echo
+        read -p "Do you want to configure Git now? (Y/n): " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Nn]$ ]]; then
+            print_info "Git configuration skipped"
+            print_info "You can run ./setup-git.sh later to configure it"
+            return
+        fi
+    fi
+
+    # Run the git setup script
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [ -x "$SCRIPT_DIR/setup-git.sh" ]; then
+        "$SCRIPT_DIR/setup-git.sh"
+    else
+        print_error "setup-git.sh not found or not executable"
+    fi
+}
+
+################################################################################
 # Final Message
 ################################################################################
 
@@ -491,6 +532,7 @@ main() {
     install_tpm
     install_plugins
     change_default_shell
+    setup_git_prompt
     print_final_message
 }
 
