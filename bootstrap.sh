@@ -386,13 +386,6 @@ install_zinit() {
         print_success "Zinit installed"
         ZINIT_CHANGED=true
         ZINIT_INSTALLED=true  # First time installation
-
-        # Pre-load zsh to let Zinit download plugins in background
-        if [ -f "$HOME/.zshrc" ]; then
-            print_info "Pre-loading Zinit plugins..."
-            run_cmd zsh -c "exit"
-            print_success "Zinit plugins downloaded"
-        fi
     fi
 }
 
@@ -479,6 +472,29 @@ change_default_shell() {
             print_error "Unable to find zsh binary"
             exit 1
         fi
+    fi
+}
+
+################################################################################
+# Pre-load Zinit Plugins
+################################################################################
+
+preload_zinit_plugins() {
+    # Only run if Zinit was just installed (first time)
+    if [ "$ZINIT_INSTALLED" = true ] && [ -f "$HOME/.zshrc" ]; then
+        print_header "Pre-loading Zinit Plugins"
+        print_info "Downloading Zsh plugins in background..."
+
+        # Launch zsh interactively to trigger Zinit plugin installation
+        # Use timeout to avoid hanging, and run in background
+        if [ "$VERBOSE" = true ]; then
+            timeout 30 zsh -i -c "sleep 2" 2>&1 || true
+        else
+            timeout 30 zsh -i -c "sleep 2" &>/dev/null || true
+        fi
+
+        print_success "Zinit plugins pre-loaded"
+        print_info "Plugins will be ready on first zsh launch"
     fi
 }
 
@@ -872,6 +888,7 @@ main() {
     install_tpm
     install_plugins
     change_default_shell
+    preload_zinit_plugins
     install_essential_tools
     setup_git_prompt
     setup_ssh_key
