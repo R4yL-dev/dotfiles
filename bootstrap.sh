@@ -483,18 +483,18 @@ preload_zinit_plugins() {
     # Only run if Zinit was just installed (first time)
     if [ "$ZINIT_INSTALLED" = true ] && [ -f "$HOME/.zshrc" ]; then
         print_header "Pre-loading Zinit Plugins"
-        print_info "Downloading Zsh plugins in background..."
+        print_info "Downloading Zsh plugins..."
 
-        # Launch zsh interactively to trigger Zinit plugin installation
-        # Use timeout to avoid hanging, and run in background
+        # Use zinit update to download all plugins synchronously (waits until complete)
+        # This ensures all downloads finish before the script exits
         if [ "$VERBOSE" = true ]; then
-            timeout 30 zsh -i -c "sleep 2" 2>&1 || true
+            zsh -c "source ~/.zshrc; zinit update --all" 2>&1 || true
         else
-            timeout 30 zsh -i -c "sleep 2" &>/dev/null || true
+            zsh -c "source ~/.zshrc; zinit update --all" &>/dev/null || true
         fi
 
-        print_success "Zinit plugins pre-loaded"
-        print_info "Plugins will be ready on first zsh launch"
+        print_success "Zinit plugins downloaded"
+        print_info "All plugins are ready"
     fi
 }
 
