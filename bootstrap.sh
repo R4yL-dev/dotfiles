@@ -26,6 +26,21 @@ CIRCLE="${YELLOW}⊙${NC}"
 # Global variables
 KITTY_INSTALLED=false
 
+# Get the directory where this script is located (once, at the beginning)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Track what was actually done during this run
+CONFIGS_DEPLOYED=false
+KITTY_CONFIGURED=false
+GIT_CONFIGURED=false
+ZINIT_CHANGED=false
+ZINIT_INSTALLED=false  # New installation (not update)
+TPM_CHANGED=false
+TPM_INSTALLED=false    # New installation (not update)
+SHELL_CHANGED=false
+BACKUPS_CREATED=false
+declare -a BACKUPS_LIST
+
 ################################################################################
 # Helper Functions
 ################################################################################
@@ -156,21 +171,33 @@ deploy_kitty_config() {
     if [ "$KITTY_INSTALLED" = true ]; then
         print_header "Deploying Kitty Configuration"
 
+        # Check if the kitty directory symlink already exists and points to the right place
+        local kitty_dir_target="$SCRIPT_DIR/kitty/.config/kitty"
+
+        if [ -L "$HOME/.config/kitty" ] && \
+           [ "$(readlink -f "$HOME/.config/kitty")" = "$kitty_dir_target" ]; then
+            print_skip "Kitty configuration already deployed"
+            return
+        fi
+
         # Backup existing config if any
         if [ -d "$HOME/.config/kitty" ] && [ ! -L "$HOME/.config/kitty" ]; then
             local timestamp=$(date +"%Y%m%d_%H%M%S")
-            mv "$HOME/.config/kitty" "$HOME/.config/kitty.backup.$timestamp"
+            local backup="$HOME/.config/kitty.backup.$timestamp"
+            mv "$HOME/.config/kitty" "$backup"
             print_success "Backup: ~/.config/kitty.backup.$timestamp"
+            BACKUPS_CREATED=true
+            BACKUPS_LIST+=("$backup")
         fi
 
         # Deploy with stow
-        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
         cd "$SCRIPT_DIR"
 
         if stow -t "$HOME" kitty; then
             print_success "Kitty configuration deployed"
             print_info "  ~/.config/kitty/kitty.conf → $SCRIPT_DIR/kitty/.config/kitty/kitty.conf"
             print_info "  ~/.config/kitty/dracula.conf → $SCRIPT_DIR/kitty/.config/kitty/dracula.conf"
+            KITTY_CONFIGURED=true
         else
             print_error "Failed to deploy Kitty configuration"
         fi
@@ -224,6 +251,8 @@ backup_configs() {
             local backup="${config}.backup.${timestamp}"
             cp "$config" "$backup"
             print_success "Backup created: $backup"
+            BACKUPS_CREATED=true
+            BACKUPS_LIST+=("$backup")
             backed_up=1
         elif [ -L "$config" ]; then
             local target=$(readlink -f "$config")
@@ -247,14 +276,21 @@ backup_configs() {
 deploy_dotfiles() {
     print_header "Deploying Dotfiles with Stow"
 
-    # Get the directory where this script is located
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    # Check if symlinks already exist and point to the right place
+    local zshrc_target="$SCRIPT_DIR/zsh/.zshrc"
+    local tmux_target="$SCRIPT_DIR/tmux/.tmux.conf"
+
+    if [ -L "$HOME/.zshrc" ] && [ "$(readlink -f "$HOME/.zshrc")" = "$zshrc_target" ] && \
+       [ -L "$HOME/.tmux.conf" ] && [ "$(readlink -f "$HOME/.tmux.conf")" = "$tmux_target" ]; then
+        print_skip "Zsh and Tmux configurations already deployed"
+        return
+    fi
 
     cd "$SCRIPT_DIR"
 
-    # Remove existing symlinks if they exist
-    [ -L "$HOME/.zshrc" ] && rm "$HOME/.zshrc"
-    [ -L "$HOME/.tmux.conf" ] && rm "$HOME/.tmux.conf"
+    # Remove existing files/symlinks (backups were already created in backup_configs)
+    rm -f "$HOME/.zshrc"
+    rm -f "$HOME/.tmux.conf"
 
     # Deploy with stow
     print_info "Creating symlinks..."
@@ -262,6 +298,7 @@ deploy_dotfiles() {
         print_success "Symlinks created with Stow"
         print_info "  ~/.zshrc → $SCRIPT_DIR/zsh/.zshrc"
         print_info "  ~/.tmux.conf → $SCRIPT_DIR/tmux/.tmux.conf"
+        CONFIGS_DEPLOYED=true
 
         # Verify symlinks were actually created
         if [ ! -L "$HOME/.zshrc" ] || [ ! -L "$HOME/.tmux.conf" ]; then
@@ -291,12 +328,15 @@ install_zinit() {
             cd "$ZINIT_HOME"
             git pull
             print_success "Zinit updated"
+            ZINIT_CHANGED=true
         fi
     else
         print_info "Cloning Zinit..."
         mkdir -p "$(dirname "$ZINIT_HOME")"
         git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME"
         print_success "Zinit installed"
+        ZINIT_CHANGED=true
+        ZINIT_INSTALLED=true  # First time installation
     fi
 }
 
@@ -317,6 +357,7 @@ install_tpm() {
             cd "$TPM_HOME"
             git pull
             print_success "TPM updated"
+            TPM_CHANGED=true
 
             # Install/update plugins automatically
             if [ -f "$TPM_HOME/bin/install_plugins" ]; then
@@ -330,6 +371,8 @@ install_tpm() {
         mkdir -p "${HOME}/.tmux/plugins"
         git clone https://github.com/tmux-plugins/tpm "$TPM_HOME"
         print_success "TPM installed"
+        TPM_CHANGED=true
+        TPM_INSTALLED=true  # First time installation
 
         # Install plugins automatically
         if [ -f "$TPM_HOME/bin/install_plugins" ]; then
@@ -371,9 +414,11 @@ change_default_shell() {
         if [ -x /bin/zsh ]; then
             chsh -s /bin/zsh
             print_success "Default shell changed to zsh"
+            SHELL_CHANGED=true
         elif [ -x /usr/bin/zsh ]; then
             chsh -s /usr/bin/zsh
             print_success "Default shell changed to zsh"
+            SHELL_CHANGED=true
         else
             print_error "Unable to find zsh binary"
             exit 1
@@ -388,14 +433,34 @@ change_default_shell() {
 setup_git_prompt() {
     print_header "Git Configuration (optional)"
 
+    # Case 1: Symlink exists (already managed by dotfiles)
     if [ -L "$HOME/.gitconfig" ]; then
-        print_skip "Git configuration already deployed"
+        print_skip "Git already managed by dotfiles"
         read -p "Do you want to reconfigure Git? (y/N): " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[OoYy]$ ]]; then
             print_info "Git configuration skipped"
             return
         fi
+
+    # Case 2: Regular file exists (user's existing config)
+    elif [ -f "$HOME/.gitconfig" ]; then
+        print_warn "You already have a .gitconfig file"
+        echo
+        print_info "The setup-git.sh script will:"
+        print_info "  - Create a backup of your current .gitconfig"
+        print_info "  - Replace it with our template (name, email, aliases)"
+        print_info "  - Manage it with Stow (symlink)"
+        echo
+        read -p "Do you want to replace it with our template? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[OoYy]$ ]]; then
+            print_info "Git configuration skipped"
+            print_info "You can run ./setup-git.sh later to configure it"
+            return
+        fi
+
+    # Case 3: No config exists
     else
         print_info "Git is not yet configured"
         echo
@@ -414,9 +479,18 @@ setup_git_prompt() {
     fi
 
     # Run the git setup script
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     if [ -x "$SCRIPT_DIR/setup-git.sh" ]; then
-        "$SCRIPT_DIR/setup-git.sh"
+        "$SCRIPT_DIR/setup-git.sh" --skip-confirmation
+        local git_exit_code=$?
+
+        if [ $git_exit_code -eq 0 ]; then
+            GIT_CONFIGURED=true
+        elif [ $git_exit_code -eq 2 ]; then
+            print_info "Git configuration cancelled by user"
+        else
+            print_error "Git configuration failed"
+            print_warn "You can run ./setup-git.sh later to configure it"
+        fi
     else
         print_error "setup-git.sh not found or not executable"
     fi
@@ -427,81 +501,127 @@ setup_git_prompt() {
 ################################################################################
 
 print_final_message() {
-    local timestamp=$(date +"%Y%m%d_%H%M%S")
+    # Check if anything was actually done
+    local anything_changed=false
+    if [ "$CONFIGS_DEPLOYED" = true ] || [ "$KITTY_CONFIGURED" = true ] || \
+       [ "$GIT_CONFIGURED" = true ] || [ "$ZINIT_CHANGED" = true ] || \
+       [ "$TPM_CHANGED" = true ] || [ "$SHELL_CHANGED" = true ]; then
+        anything_changed=true
+    fi
+
+    # Check if shell reload is needed (only on first installation)
+    local reload_needed=false
+    if [ "$ZINIT_INSTALLED" = true ] || [ "$TPM_INSTALLED" = true ]; then
+        reload_needed=true
+    fi
 
     echo
-    echo -e "${GREEN}╔════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║                                                        ║${NC}"
-    echo -e "${GREEN}║      Installation completed successfully! 🎉          ║${NC}"
-    echo -e "${GREEN}║                                                        ║${NC}"
-    echo -e "${GREEN}╚════════════════════════════════════════════════════════╝${NC}"
-    echo
-    echo -e "${BLUE}📝 Next Steps:${NC}"
-    echo
-
-    # Detect if we're in Kitty
-    if [ -n "$KITTY_WINDOW_ID" ]; then
-        # Scenario 1: User IS in Kitty
-        echo -e "${YELLOW}You are currently in Kitty:${NC}"
-        echo -e "   ${INFO} Simply run ${BLUE}exec zsh${NC}"
-        echo -e "           ${INFO} This will reload zsh, auto-launch tmux, and install Zsh plugins"
-        echo -e "           ${CHECK} Tmux plugins are already installed!"
-    elif [ "$KITTY_INSTALLED" = true ]; then
-        # Scenario 2: Kitty installed but not currently used
-        echo -e "${YELLOW}Recommended - Launch Kitty for the full experience:${NC}"
-        echo -e "   ${INFO} Simply run ${BLUE}kitty${NC}"
-        echo -e "           ${INFO} This will auto-launch zsh and tmux, install Zsh plugins automatically"
-        echo -e "           ${CHECK} Tmux plugins are already installed!"
-        echo
-        echo -e "${YELLOW}Alternative - Continue in this terminal (without Kitty theme):${NC}"
-        echo -e "   ${INFO} Close and reopen terminal OR run ${BLUE}exec zsh${NC}"
-        echo -e "           ${INFO} This will auto-launch tmux and install Zsh plugins"
-        echo -e "           ${CHECK} Tmux plugins are already installed!"
+    if [ "$anything_changed" = true ]; then
+        # Check if this is a first installation or an update
+        if [ "$ZINIT_INSTALLED" = true ] || [ "$TPM_INSTALLED" = true ]; then
+            # First installation
+            echo -e "${GREEN}╔════════════════════════════════════════════════════════╗${NC}"
+            echo -e "${GREEN}║                                                        ║${NC}"
+            echo -e "${GREEN}║      Installation completed successfully! 🎉           ║${NC}"
+            echo -e "${GREEN}║                                                        ║${NC}"
+            echo -e "${GREEN}╚════════════════════════════════════════════════════════╝${NC}"
+        else
+            # Update/reconfiguration
+            echo -e "${GREEN}╔════════════════════════════════════════════════════════╗${NC}"
+            echo -e "${GREEN}║                                                        ║${NC}"
+            echo -e "${GREEN}║         Update completed successfully! ✓               ║${NC}"
+            echo -e "${GREEN}║                                                        ║${NC}"
+            echo -e "${GREEN}╚════════════════════════════════════════════════════════╝${NC}"
+        fi
     else
-        # Scenario 3: No Kitty
-        echo -e "${YELLOW}Complete the setup:${NC}"
-        echo -e "   ${INFO} Close and reopen terminal OR run ${BLUE}exec zsh${NC}"
-        echo -e "           ${INFO} This will auto-launch tmux and install Zsh plugins automatically"
-        echo -e "           ${CHECK} Tmux plugins are already installed!"
-        echo
-        echo -e "   ${WARN} Note: Some terminals may not respect the default shell setting"
+        echo -e "${BLUE}╔════════════════════════════════════════════════════════╗${NC}"
+        echo -e "${BLUE}║                                                        ║${NC}"
+        echo -e "${BLUE}║      No changes made - Already up to date! ✓           ║${NC}"
+        echo -e "${BLUE}║                                                        ║${NC}"
+        echo -e "${BLUE}╚════════════════════════════════════════════════════════╝${NC}"
     fi
-    echo
-    echo -e "${YELLOW}Git Synchronization (Optional):${NC}"
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    echo -e "   ${BLUE}To update from the repository:${NC}"
-    echo -e "   ${INFO} cd $SCRIPT_DIR"
-    echo -e "   ${INFO} git pull"
-    echo -e "   ${INFO} ./bootstrap.sh"
-    echo
-    echo -e "   ${BLUE}To propose modifications (if authorized):${NC}"
-    echo -e "   ${INFO} Modify files in $SCRIPT_DIR"
-    echo -e "   ${INFO} git add ."
-    echo -e "   ${INFO} git commit -m \"Description of changes\""
-    echo -e "   ${INFO} git push"
     echo
 
-    # Show backup files if any exist
-    if ls "$HOME"/.zshrc.backup.* >/dev/null 2>&1 || ls "$HOME"/.tmux.conf.backup.* >/dev/null 2>&1; then
-        echo -e "${YELLOW}📂 Backup files created:${NC}"
-        ls -1 "$HOME"/.zshrc.backup.* 2>/dev/null | while read file; do
-            echo -e "   ${INFO} $file"
-        done
-        ls -1 "$HOME"/.tmux.conf.backup.* 2>/dev/null | while read file; do
-            echo -e "   ${INFO} $file"
+    # Only show "Next Steps" if shell reload is needed
+    if [ "$reload_needed" = true ]; then
+        echo -e "${BLUE}📝 Next Steps:${NC}"
+        echo
+
+        # Detect if we're in Kitty
+        if [ -n "$KITTY_WINDOW_ID" ]; then
+            # Scenario 1: User IS in Kitty
+            echo -e "${YELLOW}You are currently in Kitty:${NC}"
+            echo -e "   ${INFO} Simply run ${BLUE}exec zsh${NC}"
+            echo -e "           ${INFO} This will reload zsh and apply the changes"
+        elif [ "$KITTY_CONFIGURED" = true ]; then
+            # Scenario 2: Kitty was just configured
+            echo -e "${YELLOW}Recommended - Launch Kitty for the full experience:${NC}"
+            echo -e "   ${INFO} Simply run ${BLUE}kitty${NC}"
+            echo -e "           ${INFO} This will auto-launch zsh and tmux with your new configuration"
+            echo
+            echo -e "${YELLOW}Alternative - Continue in this terminal:${NC}"
+            echo -e "   ${INFO} Close and reopen terminal OR run ${BLUE}exec zsh${NC}"
+        else
+            # Scenario 3: No Kitty or not configured
+            echo -e "${YELLOW}Apply the changes:${NC}"
+            echo -e "   ${INFO} Close and reopen terminal OR run ${BLUE}exec zsh${NC}"
+        fi
+        echo
+    fi
+
+    # Show backup files only if created during this run
+    if [ "$BACKUPS_CREATED" = true ]; then
+        echo -e "${YELLOW}📂 Backup files created during this run:${NC}"
+        for backup in "${BACKUPS_LIST[@]}"; do
+            echo -e "   ${INFO} $backup"
         done
         echo
     fi
 
-    echo -e "${BLUE}✨ Configuration applied:${NC}"
-    if [ "$KITTY_INSTALLED" = true ]; then
-        echo -e "   ${CHECK} Kitty installed and configured (Dracula theme + CascadiaCode)"
+    # Show what was actually done
+    echo -e "${BLUE}✨ Changes applied:${NC}"
+    local something_shown=false
+
+    if [ "$CONFIGS_DEPLOYED" = true ]; then
+        echo -e "   ${CHECK} Zsh and Tmux configurations deployed"
+        something_shown=true
     fi
-    echo -e "   ${CHECK} Symlinks created with Stow"
-    echo -e "   ${CHECK} Plugin managers installed (Zinit + TPM)"
-    echo -e "   ${CHECK} Tmux plugins installed (ready to use)"
-    echo -e "   ${CHECK} Zsh plugins ready to install on first launch"
-    echo -e "   ${CHECK} Default shell configured to zsh"
+
+    if [ "$KITTY_CONFIGURED" = true ]; then
+        echo -e "   ${CHECK} Kitty configuration deployed (Dracula theme + CascadiaCode)"
+        something_shown=true
+    fi
+
+    if [ "$GIT_CONFIGURED" = true ]; then
+        echo -e "   ${CHECK} Git configuration deployed"
+        something_shown=true
+    fi
+
+    if [ "$ZINIT_INSTALLED" = true ]; then
+        echo -e "   ${CHECK} Zinit (Zsh plugin manager) installed"
+        something_shown=true
+    elif [ "$ZINIT_CHANGED" = true ]; then
+        echo -e "   ${CHECK} Zinit (Zsh plugin manager) updated"
+        something_shown=true
+    fi
+
+    if [ "$TPM_INSTALLED" = true ]; then
+        echo -e "   ${CHECK} TPM (Tmux plugin manager) installed"
+        something_shown=true
+    elif [ "$TPM_CHANGED" = true ]; then
+        echo -e "   ${CHECK} TPM (Tmux plugin manager) updated"
+        something_shown=true
+    fi
+
+    if [ "$SHELL_CHANGED" = true ]; then
+        echo -e "   ${CHECK} Default shell changed to zsh"
+        something_shown=true
+    fi
+
+    if [ "$something_shown" = false ]; then
+        echo -e "   ${INFO} Everything was already configured"
+    fi
+
     echo
 }
 

@@ -60,17 +60,22 @@ setup_git_config() {
 
     # Check if git config already exists
     if [ -f "$HOME/.gitconfig" ] && [ ! -L "$HOME/.gitconfig" ]; then
-        echo -e "${YELLOW}Un fichier .gitconfig existe déjà${NC}"
-        read -p "Voulez-vous le remplacer ? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[OoYy]$ ]]; then
-            print_info "Configuration Git annulée"
-            exit 0
+        # Only ask if not called with --skip-confirmation
+        if [ "$1" != "--skip-confirmation" ]; then
+            echo -e "${YELLOW}Un fichier .gitconfig existe déjà${NC}"
+            read -p "Voulez-vous le remplacer ? (y/N): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[OoYy]$ ]]; then
+                print_info "Configuration Git annulée"
+                exit 2
+            fi
         fi
         # Backup existing config
         local timestamp=$(date +"%Y%m%d_%H%M%S")
         cp "$HOME/.gitconfig" "$HOME/.gitconfig.backup.$timestamp"
         print_success "Backup créé: ~/.gitconfig.backup.$timestamp"
+        # Remove the original file after backup
+        rm "$HOME/.gitconfig"
     fi
 
     # Ask for user information
@@ -85,8 +90,12 @@ setup_git_config() {
     done
 
     read -p "Email (ex: john@example.com): " git_email
-    while [ -z "$git_email" ]; do
-        echo -e "${RED}L'email ne peut pas être vide${NC}"
+    while [ -z "$git_email" ] || [[ ! "$git_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; do
+        if [ -z "$git_email" ]; then
+            echo -e "${RED}L'email ne peut pas être vide${NC}"
+        else
+            echo -e "${RED}Format d'email invalide${NC}"
+        fi
         read -p "Email (ex: john@example.com): " git_email
     done
 
@@ -100,8 +109,8 @@ setup_git_config() {
     # Deploy with stow
     print_info "Déploiement avec stow..."
 
-    # Remove existing symlink if any
-    [ -L "$HOME/.gitconfig" ] && rm "$HOME/.gitconfig"
+    # Remove existing file/symlink if any
+    rm -f "$HOME/.gitconfig"
 
     # Replace template with generated file temporarily
     mv "$TEMPLATE_FILE" "$TEMPLATE_FILE.bak"
@@ -118,15 +127,16 @@ setup_git_config() {
         print_info "Email: $git_email"
         echo
         print_info "Aliases disponibles: git st, git co, git br, git ci, git lg"
+
+        # Remove backup since deployment succeeded
+        rm -f "$TEMPLATE_FILE.bak"
+        exit 0
     else
         print_error "Erreur lors du déploiement"
-        # Restore template
+        # Restore template on error
         mv "$TEMPLATE_FILE.bak" "$TEMPLATE_FILE"
         exit 1
     fi
-
-    # Restore original template
-    mv "$TEMPLATE_FILE.bak" "$TEMPLATE_FILE"
 }
 
 ################################################################################
@@ -145,7 +155,7 @@ main() {
     echo -e "${NC}"
     echo -e "${BLUE}  Configuration Generator${NC}\n"
 
-    setup_git_config
+    setup_git_config "$@"
 }
 
-main
+main "$@"
