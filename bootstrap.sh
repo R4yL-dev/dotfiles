@@ -9,6 +9,17 @@
 
 set -e  # Exit on error
 
+# Parse command line arguments
+VERBOSE=false
+for arg in "$@"; do
+    case $arg in
+        -v|--verbose)
+            VERBOSE=true
+            shift
+            ;;
+    esac
+done
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -104,6 +115,14 @@ backup_file() {
     echo "$backup_path"
 }
 
+run_cmd() {
+    if [ "$VERBOSE" = true ]; then
+        "$@"
+    else
+        "$@" &> /dev/null
+    fi
+}
+
 ################################################################################
 # System Detection
 ################################################################################
@@ -153,10 +172,10 @@ install_packages() {
     # Install missing packages
     if [ ${#to_install[@]} -gt 0 ]; then
         print_info "Updating package list..."
-        $UPDATE_CMD
+        run_cmd $UPDATE_CMD
 
         print_info "Installing: ${to_install[*]}"
-        $INSTALL_CMD "${to_install[@]}"
+        run_cmd $INSTALL_CMD "${to_install[@]}"
         print_success "Packages installed successfully"
     else
         print_success "All dependencies are already installed"
@@ -185,7 +204,7 @@ install_kitty() {
         echo
         if [[ ! $REPLY =~ ^[Nn]$ ]]; then
             print_info "Installing Kitty..."
-            $INSTALL_CMD kitty
+            run_cmd $INSTALL_CMD kitty
             KITTY_INSTALLED=true
             print_success "Kitty installed"
         else
@@ -224,7 +243,7 @@ deploy_kitty_config() {
         # Deploy with stow
         cd "$SCRIPT_DIR"
 
-        if stow -t "$HOME" kitty; then
+        if run_cmd stow -t "$HOME" kitty; then
             print_success "Kitty configuration deployed"
             print_info "  ~/.config/kitty/kitty.conf → $SCRIPT_DIR/kitty/.config/kitty/kitty.conf"
             print_info "  ~/.config/kitty/dracula.conf → $SCRIPT_DIR/kitty/.config/kitty/dracula.conf"
@@ -251,9 +270,9 @@ install_cascadia_font() {
 
             # Install based on package manager
             if [ "$PKG_MANAGER" = "dnf" ]; then
-                $INSTALL_CMD cascadia-code-fonts
+                run_cmd $INSTALL_CMD cascadia-code-fonts
             elif [ "$PKG_MANAGER" = "apt" ]; then
-                $INSTALL_CMD fonts-cascadia-code
+                run_cmd $INSTALL_CMD fonts-cascadia-code
             fi
 
             # Verify installation
@@ -324,7 +343,7 @@ deploy_dotfiles() {
 
     # Deploy with stow
     print_info "Creating symlinks..."
-    if stow -t "$HOME" zsh tmux; then
+    if run_cmd stow -t "$HOME" zsh tmux; then
         print_success "Symlinks created with Stow"
         print_info "  ~/.zshrc → $SCRIPT_DIR/zsh/.zshrc"
         print_info "  ~/.tmux.conf → $SCRIPT_DIR/tmux/.tmux.conf"
@@ -356,14 +375,14 @@ install_zinit() {
         echo
         if [[ $REPLY =~ ^[OoYy]$ ]]; then
             cd "$ZINIT_HOME"
-            git pull
+            run_cmd git pull
             print_success "Zinit updated"
             ZINIT_CHANGED=true
         fi
     else
         print_info "Cloning Zinit..."
         mkdir -p "$(dirname "$ZINIT_HOME")"
-        git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME"
+        run_cmd git clone https://github.com/zdharma-continuum/zinit.git "$ZINIT_HOME"
         print_success "Zinit installed"
         ZINIT_CHANGED=true
         ZINIT_INSTALLED=true  # First time installation
@@ -385,21 +404,21 @@ install_tpm() {
         echo
         if [[ $REPLY =~ ^[OoYy]$ ]]; then
             cd "$TPM_HOME"
-            git pull
+            run_cmd git pull
             print_success "TPM updated"
             TPM_CHANGED=true
 
             # Install/update plugins automatically
             if [ -f "$TPM_HOME/bin/install_plugins" ]; then
                 print_info "Updating tmux plugins..."
-                "$TPM_HOME/bin/install_plugins"
+                run_cmd "$TPM_HOME/bin/install_plugins"
                 print_success "Tmux plugins updated"
             fi
         fi
     else
         print_info "Cloning TPM..."
         mkdir -p "${HOME}/.tmux/plugins"
-        git clone https://github.com/tmux-plugins/tpm "$TPM_HOME"
+        run_cmd git clone https://github.com/tmux-plugins/tpm "$TPM_HOME"
         print_success "TPM installed"
         TPM_CHANGED=true
         TPM_INSTALLED=true  # First time installation
@@ -407,7 +426,7 @@ install_tpm() {
         # Install plugins automatically
         if [ -f "$TPM_HOME/bin/install_plugins" ]; then
             print_info "Installing tmux plugins automatically..."
-            "$TPM_HOME/bin/install_plugins"
+            run_cmd "$TPM_HOME/bin/install_plugins"
             print_success "Tmux plugins installed"
         fi
     fi
@@ -442,11 +461,11 @@ change_default_shell() {
         print_info "Current shell: $CURRENT_SHELL"
         print_info "Changing default shell to zsh..."
         if [ -x /bin/zsh ]; then
-            chsh -s /bin/zsh
+            run_cmd chsh -s /bin/zsh
             print_success "Default shell changed to zsh"
             SHELL_CHANGED=true
         elif [ -x /usr/bin/zsh ]; then
-            chsh -s /usr/bin/zsh
+            run_cmd chsh -s /usr/bin/zsh
             print_success "Default shell changed to zsh"
             SHELL_CHANGED=true
         else
@@ -506,7 +525,7 @@ install_essential_tools() {
     # Install missing tools
     print_info "Installing: ${to_install[*]}"
 
-    if $INSTALL_CMD "${to_install[@]}"; then
+    if run_cmd $INSTALL_CMD "${to_install[@]}"; then
         print_success "Essential tools installed successfully"
         TOOLS_INSTALLED=true
 
