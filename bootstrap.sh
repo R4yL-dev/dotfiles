@@ -24,19 +24,19 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --git-name)
-            GIT_NAME="$2"
+            export GIT_NAME="$2"
             shift 2
             ;;
         --git-email)
-            GIT_EMAIL="$2"
+            export GIT_EMAIL="$2"
             shift 2
             ;;
         --ssh-email)
-            SSH_EMAIL="$2"
+            export SSH_EMAIL="$2"
             shift 2
             ;;
         --email)
-            EMAIL="$2"
+            export EMAIL="$2"
             shift 2
             ;;
         *)
