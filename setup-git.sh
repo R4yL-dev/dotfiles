@@ -77,21 +77,32 @@ setup_git_config() {
     fi
 
     # Check if git config already exists
-    if [ -f "$HOME/.gitconfig" ] && [ ! -L "$HOME/.gitconfig" ]; then
+    local config_exists=false
+    if [ -f "$HOME/.gitconfig" ] || [ -L "$HOME/.gitconfig" ]; then
+        config_exists=true
+
         # Only ask if not called with --skip-confirmation
         if [ "$1" != "--skip-confirmation" ]; then
-            echo -e "${YELLOW}Un fichier .gitconfig existe déjà${NC}"
-            read -p "Voulez-vous le remplacer ? (y/N): " -n 1 -r
+            if [ -L "$HOME/.gitconfig" ]; then
+                echo -e "${YELLOW}Git est déjà configuré via dotfiles${NC}"
+            else
+                echo -e "${YELLOW}Un fichier .gitconfig existe déjà${NC}"
+            fi
+            read -p "Voulez-vous reconfigurer ? (y/N): " -n 1 -r
             echo
             if [[ ! $REPLY =~ ^[OoYy]$ ]]; then
                 print_info "Configuration Git annulée"
                 exit 2
             fi
         fi
-        # Backup existing config
-        local backup=$(backup_file "$HOME/.gitconfig")
-        print_success "Backup créé: $backup"
-        # Remove the original file after backup
+
+        # Backup existing config if it's a regular file
+        if [ -f "$HOME/.gitconfig" ] && [ ! -L "$HOME/.gitconfig" ]; then
+            local backup=$(backup_file "$HOME/.gitconfig")
+            print_success "Backup créé: $backup"
+        fi
+
+        # Remove the file/symlink
         rm "$HOME/.gitconfig"
     fi
 
