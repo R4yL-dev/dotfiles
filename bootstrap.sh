@@ -664,7 +664,11 @@ setup_ssh_key() {
 
     # Run the SSH setup script
     if [ -x "$SCRIPT_DIR/setup-ssh.sh" ]; then
-        "$SCRIPT_DIR/setup-ssh.sh" --skip-confirmation
+        if [ "$VERBOSE" = true ]; then
+            "$SCRIPT_DIR/setup-ssh.sh" --skip-confirmation -v
+        else
+            "$SCRIPT_DIR/setup-ssh.sh" --skip-confirmation
+        fi
         local ssh_exit_code=$?
 
         if [ $ssh_exit_code -eq 0 ]; then

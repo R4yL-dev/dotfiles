@@ -8,6 +8,16 @@
 
 set -e
 
+# Parse command line arguments
+VERBOSE=false
+for arg in "$@"; do
+    case $arg in
+        -v|--verbose)
+            VERBOSE=true
+            ;;
+    esac
+done
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -44,6 +54,14 @@ print_info() {
 
 print_warn() {
     echo -e "${YELLOW}⚠${NC} $1"
+}
+
+run_cmd() {
+    if [ "$VERBOSE" = true ]; then
+        "$@"
+    else
+        "$@" &> /dev/null
+    fi
 }
 
 backup_file() {
@@ -154,30 +172,30 @@ setup_ssh_key() {
     # Generate SSH key (ed25519 is more modern and secure)
     print_info "Generating SSH key (ed25519)..."
 
-    if ssh-keygen -t ed25519 -C "$ssh_email" -f "$HOME/.ssh/id_ed25519" -N "$passphrase"; then
+    if run_cmd ssh-keygen -t ed25519 -C "$ssh_email" -f "$HOME/.ssh/id_ed25519" -N "$passphrase"; then
         print_success "SSH key generated successfully"
 
         # Start ssh-agent and add key
         print_info "Adding key to ssh-agent..."
-        eval "$(ssh-agent -s)" > /dev/null 2>&1
+        run_cmd eval "$(ssh-agent -s)"
 
         if [ -n "$passphrase" ]; then
             # If passphrase was set, ssh-add will ask for it interactively
             echo
             print_info "Enter your passphrase to add the key to ssh-agent:"
-            if ssh-add "$HOME/.ssh/id_ed25519"; then
+            if ssh-add "$HOME/.ssh/id_ed25519"; then  # Interactive - don't wrap
                 print_success "Key added to ssh-agent"
             else
                 print_warn "Failed to add key to ssh-agent (you can run 'ssh-add ~/.ssh/id_ed25519' later)"
             fi
         else
-            ssh-add "$HOME/.ssh/id_ed25519" > /dev/null 2>&1
+            run_cmd ssh-add "$HOME/.ssh/id_ed25519"
             print_success "Key added to ssh-agent"
         fi
 
         # Copy public key to clipboard if xclip is available
         if command -v xclip &> /dev/null; then
-            if cat "$HOME/.ssh/id_ed25519.pub" | xclip -selection clipboard 2>/dev/null; then
+            if run_cmd sh -c "cat '$HOME/.ssh/id_ed25519.pub' | xclip -selection clipboard"; then
                 print_success "Public key copied to clipboard"
             fi
         fi
