@@ -10,11 +10,21 @@ set -e
 
 # Parse command line arguments
 UNATTENDED=false
-for arg in "$@"; do
-    case $arg in
+SKIP_CONFIRMATION=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
         --unattended)
             UNATTENDED=true
             shift
+            ;;
+        --skip-confirmation)
+            SKIP_CONFIRMATION=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [--unattended] [--skip-confirmation]"
+            exit 1
             ;;
     esac
 done
@@ -101,7 +111,7 @@ setup_git_config() {
         current_email=$(git config --global user.email 2>/dev/null || echo "")
 
         # Only ask if not called with --skip-confirmation
-        if [ "$1" != "--skip-confirmation" ]; then
+        if [ "$SKIP_CONFIRMATION" = false ]; then
             if [ -L "$HOME/.gitconfig" ]; then
                 echo -e "${YELLOW}Git est déjà configuré via dotfiles${NC}"
             else
@@ -134,6 +144,12 @@ setup_git_config() {
         # Use environment variables with fallback pattern
         git_name="$GIT_NAME"
         git_email="${GIT_EMAIL:-${EMAIL}}"
+
+        # Validate name is not empty
+        if [[ -z "$git_name" ]]; then
+            print_error "GIT_NAME environment variable is required in unattended mode"
+            exit 1
+        fi
 
         # Validate email format
         if [[ ! "$git_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
@@ -250,7 +266,7 @@ main() {
     echo -e "${NC}"
     echo -e "${BLUE}  Configuration Generator${NC}\n"
 
-    setup_git_config "$@"
+    setup_git_config
 }
 
-main "$@"
+main

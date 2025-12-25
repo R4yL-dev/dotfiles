@@ -42,20 +42,36 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --git-name)
+            if [[ -z "$2" ]] || [[ "$2" == -* ]]; then
+                echo "Error: --git-name requires a value"
+                exit 1
+            fi
             export GIT_NAME="$2"
             shift 2
             ;;
         --git-email)
+            if [[ -z "$2" ]] || [[ "$2" == -* ]]; then
+                echo "Error: --git-email requires a value"
+                exit 1
+            fi
             validate_email "$2" "--git-email"
             export GIT_EMAIL="$2"
             shift 2
             ;;
         --ssh-email)
+            if [[ -z "$2" ]] || [[ "$2" == -* ]]; then
+                echo "Error: --ssh-email requires a value"
+                exit 1
+            fi
             validate_email "$2" "--ssh-email"
             export SSH_EMAIL="$2"
             shift 2
             ;;
         --email)
+            if [[ -z "$2" ]] || [[ "$2" == -* ]]; then
+                echo "Error: --email requires a value"
+                exit 1
+            fi
             validate_email "$2" "--email"
             export EMAIL="$2"
             shift 2
@@ -67,6 +83,24 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+################################################################################
+# Validate Environment Variables
+################################################################################
+
+# Validate email environment variables if they were set (not from CLI args)
+# This catches emails set via: EMAIL="test@mail" ./bootstrap.sh
+if [[ -n "$EMAIL" ]]; then
+    validate_email "$EMAIL" "EMAIL (environment variable)"
+fi
+
+if [[ -n "$GIT_EMAIL" ]]; then
+    validate_email "$GIT_EMAIL" "GIT_EMAIL (environment variable)"
+fi
+
+if [[ -n "$SSH_EMAIL" ]]; then
+    validate_email "$SSH_EMAIL" "SSH_EMAIL (environment variable)"
+fi
 
 # Colors for output
 RED='\033[0;31m'

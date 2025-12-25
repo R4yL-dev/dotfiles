@@ -11,13 +11,25 @@ set -e
 # Parse command line arguments
 VERBOSE=false
 UNATTENDED=false
-for arg in "$@"; do
-    case $arg in
+SKIP_CONFIRMATION=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
         -v|--verbose)
             VERBOSE=true
+            shift
             ;;
         --unattended)
             UNATTENDED=true
+            shift
+            ;;
+        --skip-confirmation)
+            SKIP_CONFIRMATION=true
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Usage: $0 [-v|--verbose] [--unattended] [--skip-confirmation]"
+            exit 1
             ;;
     esac
 done
@@ -96,7 +108,7 @@ setup_ssh_key() {
     # Check if SSH keys already exist
     if [ -f "$HOME/.ssh/id_ed25519" ] || [ -f "$HOME/.ssh/id_rsa" ]; then
         # Only ask if not called with --skip-confirmation
-        if [ "$1" != "--skip-confirmation" ]; then
+        if [ "$SKIP_CONFIRMATION" = false ]; then
             echo -e "${YELLOW}SSH key already exists${NC}"
 
             # Display the existing public key
@@ -261,7 +273,7 @@ main() {
     echo -e "${NC}"
     echo -e "${BLUE}  Key Generator${NC}\n"
 
-    setup_ssh_key "$@"
+    setup_ssh_key
 }
 
-main "$@"
+main
