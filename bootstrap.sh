@@ -49,6 +49,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIGS_DEPLOYED=false
 KITTY_CONFIGURED=false
 GIT_CONFIGURED=false
+GIT_SKIPPED=false  # Git skipped in unattended mode
 ZINIT_CHANGED=false
 ZINIT_INSTALLED=false  # New installation (not update)
 TPM_CHANGED=false
@@ -56,6 +57,7 @@ TPM_INSTALLED=false    # New installation (not update)
 SHELL_CHANGED=false
 TOOLS_INSTALLED=false  # Essential tools installed
 SSH_KEY_GENERATED=false  # SSH key generated
+SSH_SKIPPED=false  # SSH skipped in unattended mode
 BACKUPS_CREATED=false
 declare -a BACKUPS_LIST
 
@@ -615,14 +617,13 @@ setup_git_prompt() {
     if [ "$UNATTENDED" = true ]; then
         # Check if required environment variables are set
         if [ -z "$GIT_NAME" ] || [ -z "$EMAIL" ]; then
-            print_info "Unattended mode: skipping Git configuration (GIT_NAME or EMAIL not set)"
-            print_info "To configure Git in unattended mode, set: GIT_NAME and EMAIL"
-            print_info "Optional: GIT_EMAIL (defaults to EMAIL if not set)"
+            print_skip "Git configuration skipped (environment variables not set)"
+            GIT_SKIPPED=true
             return
         fi
 
         # Variables are set, configure Git
-        print_info "Unattended mode: configuring Git with environment variables..."
+        print_info "Configuring Git with environment variables..."
         if [ -x "$SCRIPT_DIR/setup-git.sh" ]; then
             "$SCRIPT_DIR/setup-git.sh" --skip-confirmation --unattended
             local git_exit_code=$?
@@ -713,20 +714,19 @@ setup_ssh_key() {
     if [ "$UNATTENDED" = true ]; then
         # Check if required environment variable is set
         if [ -z "$EMAIL" ]; then
-            print_info "Unattended mode: skipping SSH key generation (EMAIL not set)"
-            print_info "To generate SSH key in unattended mode, set: EMAIL"
-            print_info "Optional: SSH_EMAIL (defaults to EMAIL if not set)"
+            print_skip "SSH key generation skipped (EMAIL not set)"
+            SSH_SKIPPED=true
             return
         fi
 
         # Check if SSH key already exists
         if [ -f "$HOME/.ssh/id_ed25519" ] || [ -f "$HOME/.ssh/id_rsa" ]; then
-            print_skip "SSH key already exists, skipping generation in unattended mode"
+            print_skip "SSH key already exists"
             return
         fi
 
         # Generate SSH key
-        print_info "Unattended mode: generating SSH key with environment variables..."
+        print_info "Generating SSH key with environment variables..."
         if [ -x "$SCRIPT_DIR/setup-ssh.sh" ]; then
             if [ "$VERBOSE" = true ]; then
                 "$SCRIPT_DIR/setup-ssh.sh" --skip-confirmation --unattended -v
@@ -872,6 +872,26 @@ print_final_message() {
         echo
     fi
 
+    # Show how to configure skipped components
+    if [ "$GIT_SKIPPED" = true ] || [ "$SSH_SKIPPED" = true ]; then
+        echo -e "${YELLOW}⚙️  Manual Configuration Required:${NC}"
+        echo
+
+        if [ "$GIT_SKIPPED" = true ]; then
+            echo -e "${YELLOW}Git Configuration:${NC}"
+            echo -e "   ${INFO} Run: ${BLUE}./setup-git.sh${NC}"
+            echo -e "   ${INFO} Or in unattended mode: ${BLUE}GIT_NAME=\"Your Name\" EMAIL=\"you@example.com\" ./bootstrap.sh -y${NC}"
+            echo
+        fi
+
+        if [ "$SSH_SKIPPED" = true ]; then
+            echo -e "${YELLOW}SSH Key Generation:${NC}"
+            echo -e "   ${INFO} Run: ${BLUE}./setup-ssh.sh${NC}"
+            echo -e "   ${INFO} Or in unattended mode: ${BLUE}EMAIL=\"you@example.com\" ./bootstrap.sh -y${NC}"
+            echo
+        fi
+    fi
+
     # Only show "Next Steps" if shell reload is needed
     if [ "$reload_needed" = true ]; then
         echo -e "${BLUE}📝 Next Steps:${NC}"
@@ -955,6 +975,16 @@ print_final_message() {
 
     if [ "$SSH_KEY_GENERATED" = true ]; then
         echo -e "   ${CHECK} SSH key generated (ed25519)"
+        something_shown=true
+    fi
+
+    if [ "$GIT_SKIPPED" = true ]; then
+        echo -e "   ${CIRCLE} Git configuration skipped"
+        something_shown=true
+    fi
+
+    if [ "$SSH_SKIPPED" = true ]; then
+        echo -e "   ${CIRCLE} SSH key generation skipped"
         something_shown=true
     fi
 
