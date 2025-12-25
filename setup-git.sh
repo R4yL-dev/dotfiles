@@ -65,18 +65,31 @@ print_info() {
 
 backup_file() {
     local file="$1"
+    local move_instead_of_copy="${2:-false}"  # Optional: true to move instead of copy
     local backup_dir="$HOME/.dotfiles-backups"
     local timestamp=$(date +"%Y%m%d_%H%M%S")
 
     # Create backup directory if it doesn't exist
     mkdir -p "$backup_dir"
 
-    # Get the base name without path
+    # Get the base name without path (remove .config/ prefix if present)
     local basename=$(basename "$file")
+    # Special handling for .config subdirectories
+    if [[ "$file" == *".config/"* ]]; then
+        basename=$(echo "$file" | sed 's|.*/\.config/||')
+    fi
     local backup_path="$backup_dir/${basename}.${timestamp}"
 
-    # Backup the file
-    cp "$file" "$backup_path"
+    # Backup the file or directory
+    if [ "$move_instead_of_copy" = "true" ]; then
+        mv "$file" "$backup_path"
+    else
+        if [ -d "$file" ]; then
+            cp -r "$file" "$backup_path"
+        else
+            cp "$file" "$backup_path"
+        fi
+    fi
 
     echo "$backup_path"
 }
@@ -86,7 +99,7 @@ backup_file() {
 ################################################################################
 
 setup_git_config() {
-    print_header "Configuration Git"
+    print_header "Git Configuration"
 
     # Get script directory
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -113,14 +126,14 @@ setup_git_config() {
         # Only ask if not called with --skip-confirmation
         if [ "$SKIP_CONFIRMATION" = false ]; then
             if [ -L "$HOME/.gitconfig" ]; then
-                echo -e "${YELLOW}Git est déjà configuré via dotfiles${NC}"
+                echo -e "${YELLOW}Git is already configured via dotfiles${NC}"
             else
-                echo -e "${YELLOW}Un fichier .gitconfig existe déjà${NC}"
+                echo -e "${YELLOW}A .gitconfig file already exists${NC}"
             fi
-            read -p "Voulez-vous reconfigurer ? (y/N): " -n 1 -r
+            read -p "Do you want to reconfigure? (y/N): " -n 1 -r
             echo
             if [[ ! $REPLY =~ ^[OoYy]$ ]]; then
-                print_info "Configuration Git annulée"
+                print_info "Git configuration cancelled"
                 exit 2
             fi
         fi
@@ -128,7 +141,7 @@ setup_git_config() {
         # Backup existing config if it's a regular file
         if [ -f "$HOME/.gitconfig" ] && [ ! -L "$HOME/.gitconfig" ]; then
             local backup=$(backup_file "$HOME/.gitconfig")
-            print_success "Backup créé: $backup"
+            print_success "Backup created: $backup"
         fi
 
         # Remove the file/symlink
@@ -164,7 +177,7 @@ setup_git_config() {
     # Interactive mode: ask user (use environment variables as defaults if provided)
     else
         echo
-        print_info "Entrez vos informations Git"
+        print_info "Enter your Git information"
         echo
 
         # Determine default name: environment variable > current git config > none
@@ -172,16 +185,16 @@ setup_git_config() {
 
         # Ask for name with default value if it exists
         if [ -n "$default_name" ]; then
-            read -p "Nom complet (default: $default_name): " git_name
+            read -p "Full name (default: $default_name): " git_name
             # If empty, use default value
             if [ -z "$git_name" ]; then
                 git_name="$default_name"
             fi
         else
-            read -p "Nom complet (ex: John Doe): " git_name
+            read -p "Full name (e.g. John Doe): " git_name
             while [ -z "$git_name" ]; do
-                echo -e "${RED}Le nom ne peut pas être vide${NC}"
-                read -p "Nom complet (ex: John Doe): " git_name
+                echo -e "${RED}Name cannot be empty${NC}"
+                read -p "Full name (e.g. John Doe): " git_name
             done
         fi
 
@@ -197,7 +210,7 @@ setup_git_config() {
             else
                 # Validate the new email
                 while [[ ! "$git_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; do
-                    echo -e "${RED}Format d'email invalide${NC}"
+                    echo -e "${RED}Invalid email format${NC}"
                     read -p "Email (default: $default_email): " git_email
                     # Allow user to press Enter to use default
                     if [ -z "$git_email" ]; then
@@ -207,45 +220,45 @@ setup_git_config() {
                 done
             fi
         else
-            read -p "Email (ex: john@example.com): " git_email
+            read -p "Email (e.g. john@example.com): " git_email
             while [ -z "$git_email" ] || [[ ! "$git_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; do
                 if [ -z "$git_email" ]; then
-                    echo -e "${RED}L'email ne peut pas être vide${NC}"
+                    echo -e "${RED}Email cannot be empty${NC}"
                 else
-                    echo -e "${RED}Format d'email invalide${NC}"
+                    echo -e "${RED}Invalid email format${NC}"
                 fi
-                read -p "Email (ex: john@example.com): " git_email
+                read -p "Email (e.g. john@example.com): " git_email
             done
         fi
     fi
 
     # Generate gitconfig from template
-    print_info "Génération de la configuration..."
+    print_info "Generating configuration..."
 
     sed -e "s/__GIT_USER_NAME__/$git_name/" \
         -e "s/__GIT_USER_EMAIL__/$git_email/" \
         "$TEMPLATE_FILE" > "$TARGET_FILE"
 
     # Deploy with stow
-    print_info "Déploiement avec stow..."
+    print_info "Deploying with stow..."
 
     # Remove existing file/symlink if any
     rm -f "$HOME/.gitconfig"
 
     cd "$SCRIPT_DIR"
     if stow -t "$HOME" git; then
-        print_success "Configuration Git déployée"
+        print_success "Git configuration deployed"
         print_info "  ~/.gitconfig → $TARGET_FILE"
         echo
-        print_success "Configuration terminée !"
+        print_success "Configuration complete!"
         echo
-        print_info "Utilisateur: $git_name"
+        print_info "User: $git_name"
         print_info "Email: $git_email"
         echo
-        print_info "Aliases disponibles: git st, git co, git br, git ci, git lg"
+        print_info "Available aliases: git st, git co, git br, git ci, git lg"
         exit 0
     else
-        print_error "Erreur lors du déploiement"
+        print_error "Deployment failed"
         exit 1
     fi
 }

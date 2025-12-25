@@ -82,18 +82,31 @@ run_cmd() {
 
 backup_file() {
     local file="$1"
+    local move_instead_of_copy="${2:-false}"  # Optional: true to move instead of copy
     local backup_dir="$HOME/.dotfiles-backups"
     local timestamp=$(date +"%Y%m%d_%H%M%S")
 
     # Create backup directory if it doesn't exist
     mkdir -p "$backup_dir"
 
-    # Get the base name without path
+    # Get the base name without path (remove .config/ prefix if present)
     local basename=$(basename "$file")
+    # Special handling for .config subdirectories
+    if [[ "$file" == *".config/"* ]]; then
+        basename=$(echo "$file" | sed 's|.*/\.config/||')
+    fi
     local backup_path="$backup_dir/${basename}.${timestamp}"
 
-    # Backup the file
-    cp "$file" "$backup_path"
+    # Backup the file or directory
+    if [ "$move_instead_of_copy" = "true" ]; then
+        mv "$file" "$backup_path"
+    else
+        if [ -d "$file" ]; then
+            cp -r "$file" "$backup_path"
+        else
+            cp "$file" "$backup_path"
+        fi
+    fi
 
     echo "$backup_path"
 }
@@ -200,13 +213,9 @@ setup_ssh_key() {
 
     # Backup existing key if any
     if [ -f "$HOME/.ssh/id_ed25519" ]; then
-        local backup_dir="$HOME/.dotfiles-backups"
-        local timestamp=$(date +"%Y%m%d_%H%M%S")
-        mkdir -p "$backup_dir"
-
-        mv "$HOME/.ssh/id_ed25519" "$backup_dir/id_ed25519.${timestamp}"
-        mv "$HOME/.ssh/id_ed25519.pub" "$backup_dir/id_ed25519.pub.${timestamp}"
-        print_success "Existing key backed up to $backup_dir"
+        backup_file "$HOME/.ssh/id_ed25519" true > /dev/null
+        backup_file "$HOME/.ssh/id_ed25519.pub" true > /dev/null
+        print_success "Existing keys backed up to ~/.dotfiles-backups/"
     fi
 
     # Generate SSH key (ed25519 is more modern and secure)
