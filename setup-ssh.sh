@@ -42,6 +42,10 @@ print_info() {
     echo -e "${INFO} $1"
 }
 
+print_warn() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
+
 ################################################################################
 # Main Setup
 ################################################################################
@@ -137,8 +141,14 @@ setup_ssh_key() {
         eval "$(ssh-agent -s)" > /dev/null 2>&1
 
         if [ -n "$passphrase" ]; then
-            # If passphrase was set, we need to use expect or similar, or just skip auto-add
-            print_info "Key has a passphrase - you'll need to run 'ssh-add ~/.ssh/id_ed25519' manually"
+            # If passphrase was set, ssh-add will ask for it interactively
+            echo
+            print_info "Enter your passphrase to add the key to ssh-agent:"
+            if ssh-add "$HOME/.ssh/id_ed25519"; then
+                print_success "Key added to ssh-agent"
+            else
+                print_warn "Failed to add key to ssh-agent (you can run 'ssh-add ~/.ssh/id_ed25519' later)"
+            fi
         else
             ssh-add "$HOME/.ssh/id_ed25519" > /dev/null 2>&1
             print_success "Key added to ssh-agent"
