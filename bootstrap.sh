@@ -14,8 +14,18 @@ set -e  # Exit on error
 ################################################################################
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/lib/common.sh"
-source "$SCRIPT_DIR/lib/validation.sh"
+
+# Source libraries with error handling
+if ! source "$SCRIPT_DIR/lib/common.sh" 2>/dev/null; then
+    echo "Error: Failed to load common library"
+    echo "Make sure you're running from the dotfiles directory"
+    exit 1
+fi
+
+if ! source "$SCRIPT_DIR/lib/validation.sh" 2>/dev/null; then
+    echo "Error: Failed to load validation library"
+    exit 1
+fi
 
 ################################################################################
 # Parse Command Line Arguments

@@ -99,6 +99,11 @@ dotfiles/
 ├── setup-git.sh            # Git configuration generator
 ├── setup-ssh.sh            # SSH key generator
 ├── README.md               # This documentation
+├── lib/                    # Shared libraries (code deduplication)
+│   ├── common.sh          # Helper functions (print_*, run_cmd, backup_file)
+│   ├── validation.sh      # Input validation (validate_email)
+│   ├── args.sh            # Argument parsing (init_common_args, parse_common_arg)
+│   └── README.md          # Library documentation
 ├── templates/
 │   └── gitconfig          # Git configuration template (with placeholders)
 ├── zsh/
@@ -113,6 +118,16 @@ dotfiles/
             ├── kitty.conf      # Kitty configuration
             └── dracula.conf    # Dracula theme for Kitty
 ```
+
+### Code Organization
+
+The project uses a **shared library approach** to eliminate code duplication:
+
+- **lib/common.sh**: UI helper functions (print_header, print_success, print_error, etc.) and constants (colors, symbols)
+- **lib/validation.sh**: Input validation functions (email format validation)
+- **lib/args.sh**: Common argument parsing utilities (verbose, unattended, skip-confirmation)
+
+All scripts (bootstrap.sh, setup-git.sh, setup-ssh.sh) source these libraries for consistent behavior and easier maintenance. See `lib/README.md` for complete library documentation.
 
 After installation, the following symlinks are created:
 ```
