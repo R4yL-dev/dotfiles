@@ -1,7 +1,7 @@
 ### .zshrc
 # created by : R4yL
 # version : 1.0
-# date : 16/06/24
+# date : 26/12/25
 
 # Run TMUX
 if [ -z "$TMUX" ] && [ -n "$PS1" ]; then

@@ -511,8 +511,8 @@ Personal configuration - Free to use and modify
 
 **R4yL**
 - Creation date: 16/06/24
-- Version: 2.0
-- Last update: 25/12/24
+- Version: 1.0
+- Last update: 26/12/25
 
 ---
 

@@ -87,7 +87,8 @@ setup_git_config() {
 
         # Backup existing config if it's a regular file
         if [ -f "$HOME/.gitconfig" ] && [ ! -L "$HOME/.gitconfig" ]; then
-            local backup=$(backup_file "$HOME/.gitconfig")
+            local backup
+            backup=$(backup_file "$HOME/.gitconfig")
             print_success "Backup created: $backup"
         fi
 
@@ -131,16 +132,16 @@ setup_git_config() {
 
         # Ask for name with default value if it exists
         if [ -n "$default_name" ]; then
-            read -p "Full name (default: $default_name): " git_name
+            read -r -p "Full name (default: $default_name): " git_name
             # If empty, use default value
             if [ -z "$git_name" ]; then
                 git_name="$default_name"
             fi
         else
-            read -p "Full name (e.g. John Doe): " git_name
+            read -r -p "Full name (e.g. John Doe): " git_name
             while [ -z "$git_name" ]; do
                 echo -e "${RED}Name cannot be empty${NC}"
-                read -p "Full name (e.g. John Doe): " git_name
+                read -r -p "Full name (e.g. John Doe): " git_name
             done
         fi
 
@@ -149,7 +150,7 @@ setup_git_config() {
 
         # Ask for email with default value if it exists
         if [ -n "$default_email" ]; then
-            read -p "Email (default: $default_email): " git_email
+            read -r -p "Email (default: $default_email): " git_email
             # If empty, use default value
             if [ -z "$git_email" ]; then
                 git_email="$default_email"
@@ -157,7 +158,7 @@ setup_git_config() {
                 # Validate the new email
                 while ! validate_email "$git_email" "git email" 2>/dev/null; do
                     echo -e "${RED}Invalid email format${NC}"
-                    read -p "Email (default: $default_email): " git_email
+                    read -r -p "Email (default: $default_email): " git_email
                     # Allow user to press Enter to use default
                     if [ -z "$git_email" ]; then
                         git_email="$default_email"
@@ -166,14 +167,14 @@ setup_git_config() {
                 done
             fi
         else
-            read -p "Email (e.g. john@example.com): " git_email
+            read -r -p "Email (e.g. john@example.com): " git_email
             while [ -z "$git_email" ] || ! validate_email "$git_email" "git email" 2>/dev/null; do
                 if [ -z "$git_email" ]; then
                     echo -e "${RED}Email cannot be empty${NC}"
                 else
                     echo -e "${RED}Invalid email format${NC}"
                 fi
-                read -p "Email (e.g. john@example.com): " git_email
+                read -r -p "Email (e.g. john@example.com): " git_email
             done
         fi
     fi

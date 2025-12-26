@@ -65,16 +65,18 @@ backup_file() {
     local file="$1"
     local move_instead_of_copy="${2:-false}"  # Optional: true to move instead of copy
     local backup_dir="$HOME/.dotfiles-backups"
-    local timestamp=$(date +"%Y%m%d_%H%M%S")
+    local timestamp
+    timestamp=$(date +"%Y%m%d_%H%M%S")
 
     # Create backup directory if it doesn't exist
     mkdir -p "$backup_dir"
 
     # Get the base name without path (remove .config/ prefix if present)
-    local basename=$(basename "$file")
+    local basename
+    basename=$(basename "$file")
     # Special handling for .config subdirectories
     if [[ "$file" == *".config/"* ]]; then
-        basename=$(echo "$file" | sed 's|.*/\.config/||')
+        basename="${file##*/.config/}"
     fi
     local backup_path="$backup_dir/${basename}.${timestamp}"
 

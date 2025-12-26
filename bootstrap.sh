@@ -183,10 +183,10 @@ install_packages() {
     # Install missing packages
     if [ ${#to_install[@]} -gt 0 ]; then
         print_info "Updating package list..."
-        run_cmd $UPDATE_CMD
+        run_cmd "$UPDATE_CMD"
 
         print_info "Installing: ${to_install[*]}"
-        run_cmd $INSTALL_CMD "${to_install[@]}"
+        run_cmd "$INSTALL_CMD" "${to_install[@]}"
         print_success "Packages installed successfully"
     else
         print_success "All dependencies are already installed"
@@ -207,7 +207,7 @@ install_kitty() {
         if [ "$UNATTENDED" = true ]; then
             # Unattended mode: install Kitty automatically
             print_info "Installing Kitty..."
-            run_cmd $INSTALL_CMD kitty
+            run_cmd "$INSTALL_CMD" kitty
             KITTY_INSTALLED=true
             print_success "Kitty installed"
         else
@@ -223,7 +223,7 @@ install_kitty() {
             echo
             if [[ ! $REPLY =~ ^[Nn]$ ]]; then
                 print_info "Installing Kitty..."
-                run_cmd $INSTALL_CMD kitty
+                run_cmd "$INSTALL_CMD" kitty
                 KITTY_INSTALLED=true
                 print_success "Kitty installed"
             else
@@ -254,7 +254,8 @@ deploy_kitty_config() {
 
         # Backup existing config if any
         if [ -d "$HOME/.config/kitty" ] && [ ! -L "$HOME/.config/kitty" ]; then
-            local backup=$(backup_file "$HOME/.config/kitty" true)
+            local backup
+            backup=$(backup_file "$HOME/.config/kitty" true)
             print_success "Backup: $backup"
             BACKUPS_CREATED=true
             BACKUPS_LIST+=("$backup")
@@ -290,9 +291,9 @@ install_cascadia_font() {
 
             # Install based on package manager
             if [ "$PKG_MANAGER" = "dnf" ]; then
-                run_cmd $INSTALL_CMD cascadia-code-fonts
+                run_cmd "$INSTALL_CMD" cascadia-code-fonts
             elif [ "$PKG_MANAGER" = "apt" ]; then
-                run_cmd $INSTALL_CMD fonts-cascadia-code
+                run_cmd "$INSTALL_CMD" fonts-cascadia-code
             fi
 
             # Verify installation
@@ -317,17 +318,19 @@ backup_configs() {
 
     for config in "$HOME/.zshrc" "$HOME/.tmux.conf"; do
         if [ -f "$config" ] && [ ! -L "$config" ]; then
-            local backup=$(backup_file "$config")
+            local backup
+            backup=$(backup_file "$config")
             print_success "Backup created: $backup"
             BACKUPS_CREATED=true
             BACKUPS_LIST+=("$backup")
             backed_up=1
         elif [ -L "$config" ]; then
-            local target=$(readlink -f "$config")
+            local target
+            target=$(readlink -f "$config")
             if [[ "$target" == *"dotfiles"* ]] || [[ "$target" == *"init_script"* ]]; then
-                print_skip "$(basename $config) is already a symlink to dotfiles"
+                print_skip "$(basename "$config") is already a symlink to dotfiles"
             else
-                print_warn "$(basename $config) is a symlink to: $target"
+                print_warn "$(basename "$config") is a symlink to: $target"
             fi
         fi
     done
@@ -591,19 +594,22 @@ install_essential_tools() {
     # Install missing tools
     print_info "Installing: ${to_install[*]}"
 
-    if run_cmd $INSTALL_CMD "${to_install[@]}"; then
+    if run_cmd "$INSTALL_CMD" "${to_install[@]}"; then
         print_success "Essential tools installed successfully"
         TOOLS_INSTALLED=true
 
         # Post-installation: Update tldr cache if tldr was just installed
-        if [[ " ${to_install[@]} " =~ " tldr " ]]; then
-            print_info "Updating tldr database..."
-            if tldr -u &> /dev/null; then
-                print_success "tldr database updated"
-            else
-                print_warn "Failed to update tldr database (you can run 'tldr -u' manually later)"
+        for pkg in "${to_install[@]}"; do
+            if [[ "$pkg" == "tldr" ]]; then
+                print_info "Updating tldr database..."
+                if tldr -u &> /dev/null; then
+                    print_success "tldr database updated"
+                else
+                    print_warn "Failed to update tldr database (you can run 'tldr -u' manually later)"
+                fi
+                break
             fi
-        fi
+        done
     else
         print_error "Failed to install some tools"
     fi

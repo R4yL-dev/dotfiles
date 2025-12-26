@@ -25,15 +25,15 @@ init_common_args() {
 parse_common_arg() {
     case "$1" in
         -v|--verbose)
-            VERBOSE=true
+            export VERBOSE=true
             return 0
             ;;
         --unattended)
-            UNATTENDED=true
+            export UNATTENDED=true
             return 0
             ;;
         --skip-confirmation)
-            SKIP_CONFIRMATION=true
+            export SKIP_CONFIRMATION=true
             return 0
             ;;
         *)

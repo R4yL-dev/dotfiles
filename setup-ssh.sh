@@ -113,7 +113,7 @@ setup_ssh_key() {
 
         if [ -n "$default_email" ]; then
             echo
-            read -p "Email for SSH key (default: $default_email): " input_email
+            read -r -p "Email for SSH key (default: $default_email): " input_email
             if [ -n "$input_email" ]; then
                 ssh_email="$input_email"
             else
@@ -121,7 +121,7 @@ setup_ssh_key() {
             fi
         else
             echo
-            read -p "Email for SSH key: " ssh_email
+            read -r -p "Email for SSH key: " ssh_email
         fi
 
         # Validate email
@@ -131,13 +131,13 @@ setup_ssh_key() {
             else
                 echo -e "${RED}Invalid email format${NC}"
             fi
-            read -p "Email for SSH key: " ssh_email
+            read -r -p "Email for SSH key: " ssh_email
         done
 
         # Ask for passphrase
         echo
         print_info "Passphrase (press Enter for no passphrase):"
-        read -s -p "Enter passphrase: " passphrase
+        read -r -s -p "Enter passphrase: " passphrase
         echo
     fi
 
