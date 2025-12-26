@@ -15,33 +15,21 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/common.sh"
 source "$SCRIPT_DIR/lib/validation.sh"
+source "$SCRIPT_DIR/lib/args.sh"
 
 ################################################################################
 # Parse Command Line Arguments
 ################################################################################
-VERBOSE=false
-UNATTENDED=false
-SKIP_CONFIRMATION=false
+
+init_common_args
 while [[ $# -gt 0 ]]; do
-    case $1 in
-        -v|--verbose)
-            VERBOSE=true
-            shift
-            ;;
-        --unattended)
-            UNATTENDED=true
-            shift
-            ;;
-        --skip-confirmation)
-            SKIP_CONFIRMATION=true
-            shift
-            ;;
-        *)
-            echo "Unknown option: $1"
-            echo "Usage: $0 [-v|--verbose] [--unattended] [--skip-confirmation]"
-            exit 1
-            ;;
-    esac
+    if parse_common_arg "$1"; then
+        shift
+    else
+        echo "Unknown option: $1"
+        echo "Usage: $0 [-v|--verbose] [--unattended] [--skip-confirmation]"
+        exit 1
+    fi
 done
 
 ################################################################################
