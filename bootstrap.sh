@@ -10,19 +10,12 @@
 set -e  # Exit on error
 
 ################################################################################
-# Email Validation Function
+# Source Shared Libraries
 ################################################################################
 
-validate_email() {
-    local email="$1"
-    local param_name="$2"
-
-    if [[ ! "$email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-        echo "Error: Invalid email format for $param_name: $email"
-        echo "Email must be in format: user@domain.com"
-        exit 1
-    fi
-}
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/common.sh"
+source "$SCRIPT_DIR/lib/validation.sh"
 
 ################################################################################
 # Parse Command Line Arguments
@@ -59,7 +52,7 @@ while [[ $# -gt 0 ]]; do
                 echo "Error: --git-email requires a value"
                 exit 1
             fi
-            validate_email "$2" "--git-email"
+            validate_email "$2" "--git-email" || exit 1
             export GIT_EMAIL="$2"
             shift 2
             ;;
@@ -68,7 +61,7 @@ while [[ $# -gt 0 ]]; do
                 echo "Error: --ssh-email requires a value"
                 exit 1
             fi
-            validate_email "$2" "--ssh-email"
+            validate_email "$2" "--ssh-email" || exit 1
             export SSH_EMAIL="$2"
             shift 2
             ;;
@@ -77,7 +70,7 @@ while [[ $# -gt 0 ]]; do
                 echo "Error: --email requires a value"
                 exit 1
             fi
-            validate_email "$2" "--email"
+            validate_email "$2" "--email" || exit 1
             export EMAIL="$2"
             shift 2
             ;;
@@ -101,36 +94,19 @@ if [[ -n "$GIT_NAME" ]] && [[ "$GIT_NAME" =~ ^[[:space:]]*$ ]]; then
 fi
 
 if [[ -n "$EMAIL" ]]; then
-    validate_email "$EMAIL" "EMAIL (environment variable)"
+    validate_email "$EMAIL" "EMAIL (environment variable)" || exit 1
 fi
 
 if [[ -n "$GIT_EMAIL" ]]; then
-    validate_email "$GIT_EMAIL" "GIT_EMAIL (environment variable)"
+    validate_email "$GIT_EMAIL" "GIT_EMAIL (environment variable)" || exit 1
 fi
 
 if [[ -n "$SSH_EMAIL" ]]; then
-    validate_email "$SSH_EMAIL" "SSH_EMAIL (environment variable)"
+    validate_email "$SSH_EMAIL" "SSH_EMAIL (environment variable)" || exit 1
 fi
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Symbols
-CHECK="${GREEN}✓${NC}"
-CROSS="${RED}✗${NC}"
-INFO="${BLUE}ℹ${NC}"
-WARN="${YELLOW}⚠${NC}"
-CIRCLE="${YELLOW}⊙${NC}"
 
 # Global variables
 KITTY_INSTALLED=false
-
-# Get the directory where this script is located (once, at the beginning)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Track what was actually done during this run
 CONFIGS_DEPLOYED=false
@@ -147,75 +123,6 @@ SSH_KEY_GENERATED=false  # SSH key generated
 SSH_SKIPPED=false  # SSH skipped in unattended mode
 BACKUPS_CREATED=false
 declare -a BACKUPS_LIST
-
-################################################################################
-# Helper Functions
-################################################################################
-
-print_header() {
-    echo -e "\n${BLUE}═══════════════════════════════════════════════════════${NC}"
-    echo -e "${BLUE}  $1${NC}"
-    echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}\n"
-}
-
-print_success() {
-    echo -e "${CHECK} $1"
-}
-
-print_error() {
-    echo -e "${CROSS} $1"
-}
-
-print_info() {
-    echo -e "${INFO} $1"
-}
-
-print_warn() {
-    echo -e "${WARN} $1"
-}
-
-print_skip() {
-    echo -e "${CIRCLE} $1"
-}
-
-backup_file() {
-    local file="$1"
-    local move_instead_of_copy="${2:-false}"  # Optional: true to move instead of copy
-    local backup_dir="$HOME/.dotfiles-backups"
-    local timestamp=$(date +"%Y%m%d_%H%M%S")
-
-    # Create backup directory if it doesn't exist
-    mkdir -p "$backup_dir"
-
-    # Get the base name without path (remove .config/ prefix if present)
-    local basename=$(basename "$file")
-    # Special handling for .config subdirectories
-    if [[ "$file" == *".config/"* ]]; then
-        basename=$(echo "$file" | sed 's|.*/\.config/||')
-    fi
-    local backup_path="$backup_dir/${basename}.${timestamp}"
-
-    # Backup the file or directory
-    if [ "$move_instead_of_copy" = "true" ]; then
-        mv "$file" "$backup_path"
-    else
-        if [ -d "$file" ]; then
-            cp -r "$file" "$backup_path"
-        else
-            cp "$file" "$backup_path"
-        fi
-    fi
-
-    echo "$backup_path"
-}
-
-run_cmd() {
-    if [ "$VERBOSE" = true ]; then
-        "$@"
-    else
-        "$@" &> /dev/null
-    fi
-}
 
 ################################################################################
 # System Detection
