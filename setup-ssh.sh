@@ -8,7 +8,17 @@
 
 set -e
 
-# Parse command line arguments
+################################################################################
+# Source Shared Libraries
+################################################################################
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/common.sh"
+source "$SCRIPT_DIR/lib/validation.sh"
+
+################################################################################
+# Parse Command Line Arguments
+################################################################################
 VERBOSE=false
 UNATTENDED=false
 SKIP_CONFIRMATION=false
@@ -33,83 +43,6 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
-
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m'
-
-# Symbols
-CHECK="${GREEN}✓${NC}"
-CROSS="${RED}✗${NC}"
-INFO="${BLUE}ℹ${NC}"
-
-################################################################################
-# Helper Functions
-################################################################################
-
-print_header() {
-    echo -e "\n${BLUE}═══════════════════════════════════════════════════════${NC}"
-    echo -e "${BLUE}  $1${NC}"
-    echo -e "${BLUE}═══════════════════════════════════════════════════════${NC}\n"
-}
-
-print_success() {
-    echo -e "${CHECK} $1"
-}
-
-print_error() {
-    echo -e "${CROSS} $1"
-}
-
-print_info() {
-    echo -e "${INFO} $1"
-}
-
-print_warn() {
-    echo -e "${YELLOW}⚠${NC} $1"
-}
-
-run_cmd() {
-    if [ "$VERBOSE" = true ]; then
-        "$@"
-    else
-        "$@" &> /dev/null
-    fi
-}
-
-backup_file() {
-    local file="$1"
-    local move_instead_of_copy="${2:-false}"  # Optional: true to move instead of copy
-    local backup_dir="$HOME/.dotfiles-backups"
-    local timestamp=$(date +"%Y%m%d_%H%M%S")
-
-    # Create backup directory if it doesn't exist
-    mkdir -p "$backup_dir"
-
-    # Get the base name without path (remove .config/ prefix if present)
-    local basename=$(basename "$file")
-    # Special handling for .config subdirectories
-    if [[ "$file" == *".config/"* ]]; then
-        basename=$(echo "$file" | sed 's|.*/\.config/||')
-    fi
-    local backup_path="$backup_dir/${basename}.${timestamp}"
-
-    # Backup the file or directory
-    if [ "$move_instead_of_copy" = "true" ]; then
-        mv "$file" "$backup_path"
-    else
-        if [ -d "$file" ]; then
-            cp -r "$file" "$backup_path"
-        else
-            cp "$file" "$backup_path"
-        fi
-    fi
-
-    echo "$backup_path"
-}
 
 ################################################################################
 # Main Setup
@@ -159,8 +92,7 @@ setup_ssh_key() {
         passphrase=""  # No passphrase in unattended mode
 
         # Validate email format
-        if [[ ! "$ssh_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-            print_error "Invalid email format in environment variable: $ssh_email"
+        if ! validate_email "$ssh_email" "SSH email (environment variable)"; then
             exit 1
         fi
 
@@ -191,7 +123,7 @@ setup_ssh_key() {
         fi
 
         # Validate email
-        while [ -z "$ssh_email" ] || [[ ! "$ssh_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; do
+        while [ -z "$ssh_email" ] || ! validate_email "$ssh_email" "SSH email" 2>/dev/null; do
             if [ -z "$ssh_email" ]; then
                 echo -e "${RED}Email cannot be empty${NC}"
             else
