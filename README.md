@@ -1,519 +1,618 @@
-# Dotfiles - Zsh, Tmux & Kitty Configuration
+# Dotfiles Manager
 
-Personal configuration for Zsh, Tmux and Kitty with automatic plugin management and CascadiaCode font installation.
+[![Version](https://img.shields.io/badge/version-1.0-blue.svg)](https://github.com/yourusername/dotfiles/releases/tag/v1.0)
+[![Fedora](https://img.shields.io/badge/Fedora-supported-51A2DA.svg?logo=fedora)](https://getfedora.org/)
+[![Ubuntu](https://img.shields.io/badge/Ubuntu-supported-E95420.svg?logo=ubuntu)](https://ubuntu.com/)
+[![Debian](https://img.shields.io/badge/Debian-supported-A81D33.svg?logo=debian)](https://www.debian.org/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-## 📋 Table of Contents
+A production-ready, automated dotfiles management system that streamlines development environment setup across multiple machines. One command to install and configure your entire terminal workspace.
 
-- [Overview](#overview)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Structure](#structure)
-- [Plugins](#plugins)
-- [Features](#features)
-- [Customization](#customization)
-- [Uninstallation](#uninstallation)
-- [Troubleshooting](#troubleshooting)
+## Overview
 
-## 🎯 Overview
+This dotfiles manager automates the complete setup of a modern, feature-rich development environment. It handles dependency installation, configuration deployment, plugin management, and even generates your Git and SSH configurations — all with automatic backups and idempotent execution.
 
-This project contains my personal configurations for:
-- **Zsh** with [Zinit](https://github.com/zdharma-continuum/zinit) (plugin manager)
-- **Tmux** with [TPM](https://github.com/tmux-plugins/tpm) (Tmux Plugin Manager)
-- **Kitty** (modern terminal emulator) with Dracula theme
-- **Git** with custom aliases and configuration
+### Key Features
 
-The bootstrap script fully automates configuration deployment using [GNU Stow](https://www.gnu.org/software/stow/) to manage symlinks.
+- **One-Command Installation** - Complete setup in a single command
+- **Automatic Backups** - Timestamped backups before any modifications
+- **Multi-Platform Support** - Works on Fedora, RHEL, Debian, and Ubuntu
+- **Idempotent & Safe** - Can be safely rerun without side effects
+- **Three Execution Modes** - Interactive, verbose, or fully unattended
+- **Plugin Management** - Auto-installs and configures Zinit (Zsh) and TPM (Tmux)
+- **Modern Theme** - Beautiful Dracula theme across all tools
+- **Modular Design** - Standalone scripts for Git and SSH setup
+- **CI/CD Ready** - Environment variable support for automation
+- **Smart Deployment** - GNU Stow for clean symlink management
 
-## 📦 Prerequisites
+## Quick Start
 
-### Supported Systems
-- **Fedora / RHEL** (package manager: `dnf`)
-- **Debian / Ubuntu** (package manager: `apt`)
+### Prerequisites
 
-### Dependencies
-The script will automatically install all dependencies:
-- `git`, `tmux`, `zsh`, `stow` (required)
-- `kitty` (optional, offered during installation)
-- `CascadiaCode` font (automatically installed if Kitty is chosen)
+- Linux system (Fedora/RHEL with `dnf` or Debian/Ubuntu with `apt`)
+- Sudo access
+- Internet connection
+- Git (will be installed if missing)
 
-**No manual installation required!**
-
-## 🚀 Installation
-
-### Quick Installation
+### Installation
 
 ```bash
-# 1. Clone the repository
-git clone <your-repo-url> ~/dotfiles
+# Clone the repository
+git clone https://github.com/yourusername/dotfiles.git ~/dotfiles
 cd ~/dotfiles
 
-# 2. Run the bootstrap script
+# Run the bootstrap script
 ./bootstrap.sh
+```
 
-# Optional: Run in verbose mode to see command output
+That's it! The script will:
+1. Detect your system and package manager
+2. Install required dependencies (git, tmux, zsh, stow)
+3. Optionally install Kitty terminal and CascadiaCode font
+4. Backup any existing configurations
+5. Deploy dotfiles using GNU Stow
+6. Install and configure plugin managers (Zinit, TPM)
+7. Pre-load all plugins automatically
+8. Change your default shell to Zsh
+9. Optionally configure Git and generate SSH keys
+
+### First Steps After Installation
+
+```bash
+# Logout and login (or reboot) to activate Zsh as default shell
+# Then launch a new terminal
+
+# Your environment is ready!
+# Tmux will auto-launch when you open a terminal
+# All plugins are pre-loaded and ready to use
+```
+
+## What's Included
+
+### Zsh Configuration
+
+A powerful Zsh setup with modern plugins and features:
+
+**Plugin Manager:**
+- [Zinit](https://github.com/zdharma-continuum/zinit) - Fast, feature-rich plugin manager
+
+**Plugins:**
+- [Starship](https://starship.rs/) - Modern, fast, customizable prompt
+- [zsh-syntax-highlighting](https://github.com/zsh-users/zsh-syntax-highlighting) - Fish-like syntax highlighting
+- [zsh-completions](https://github.com/zsh-users/zsh-completions) - Additional completion definitions
+- [zsh-autosuggestions](https://github.com/zsh-users/zsh-autosuggestions) - Fish-like autosuggestions
+
+**Oh-My-Zsh Snippets:**
+- Git plugin (aliases and functions)
+- Sudo plugin (ESC ESC to prefix with sudo)
+- Command-not-found (suggests package installation)
+
+**Features:**
+- 5,000 command history
+- Shared history between sessions
+- Case-insensitive completion
+- Custom keybindings (Ctrl+F, Ctrl+P, Ctrl+N)
+- Auto-launch Tmux on terminal start
+
+**Aliases:**
+```bash
+ls='ls --color'
+la='ls -a'
+lla='ls -la'
+c='clear'
+```
+
+### Tmux Configuration
+
+Professional Tmux setup with monitoring and aesthetics:
+
+**Plugin Manager:**
+- [TPM](https://github.com/tmux-plugins/tpm) - Tmux Plugin Manager
+
+**Plugins:**
+- [Dracula Theme](https://draculatheme.com/tmux) - Beautiful dark theme
+- CPU, GPU, RAM monitoring widgets
+- Network bandwidth display
+- Time and date display
+
+**Features:**
+- 256 colors + RGB support
+- Zsh as default shell
+- Vim-style pane navigation (Prefix + h/j/k/l)
+- Easy config reload (Prefix + r)
+- Status bar with system monitoring
+- Custom icon: 👽 with hostname
+
+### Kitty Terminal
+
+Modern GPU-accelerated terminal emulator (optional):
+
+**Configuration:**
+- CascadiaCode font family (all variants)
+- Font size: 16pt
+- Dracula color scheme
+- Hidden window decorations
+- Audio bell disabled
+
+**Features:**
+- GPU-accelerated rendering
+- Ligature support
+- Multiple windows and tabs
+- Image display in terminal
+
+### Git Configuration
+
+Sensible Git defaults and useful aliases:
+
+**Settings:**
+- Default branch: `main`
+- Auto-coloring enabled
+- User name and email (configured during setup)
+
+**Aliases:**
+```bash
+git st   # status
+git co   # checkout
+git br   # branch
+git ci   # commit
+git lg   # pretty log with graph
+```
+
+### SSH Key Generation
+
+Automated SSH key creation (optional):
+
+**Features:**
+- Modern ed25519 keys (secure, fast, compact)
+- Optional passphrase support
+- Automatic ssh-agent integration
+- Auto-copy public key to clipboard (if xclip available)
+- Automatic backup of existing keys
+
+## Installation Options
+
+### Interactive Mode (Default)
+
+```bash
+./bootstrap.sh
+```
+
+Prompts for decisions at each step. Perfect for first-time setup.
+
+### Verbose Mode
+
+```bash
 ./bootstrap.sh -v
 # or
 ./bootstrap.sh --verbose
 ```
 
-The script will automatically:
-1. ✅ Detect the system (dnf or apt)
-2. ✅ Install base dependencies (git, tmux, zsh, stow)
-3. ✅ **Offer to install Kitty** (recommended terminal emulator)
-4. ✅ Backup existing configurations
-5. ✅ Deploy dotfiles with Stow (zsh, tmux)
-6. ✅ Deploy Kitty configuration (if installed)
-7. ✅ **Automatically install CascadiaCode font** (if Kitty installed)
-8. ✅ Install Zinit (Zsh plugin manager)
-9. ✅ Install TPM (Tmux plugin manager)
-10. ✅ **Install Tmux plugins automatically**
-11. ✅ Configure default shell (zsh)
-12. ✅ **Offer to install essential tools** (neovim, tldr, jq, curl)
-13. ✅ **Offer to configure Git** (name, email, aliases)
-14. ✅ **Offer to generate SSH key** (ed25519, ready for GitHub)
+Shows detailed command output. Useful for debugging.
 
-### Updating Configuration
-
-The script is **idempotent** - you can rerun it to update:
+### Unattended Mode
 
 ```bash
-cd ~/dotfiles
-git pull  # Get latest changes
-./bootstrap.sh  # Apply changes
+./bootstrap.sh -y
+# or
+./bootstrap.sh --yes
 ```
 
-### Security Features
+Fully automated installation with no prompts. Uses defaults for all decisions.
 
-- **Idempotent**: Script can be safely rerun
-- **Automatic backup**: Existing configurations are backed up to `~/.dotfiles-backups/` with timestamp
-- **Non-destructive**: No data is lost
-- **Smart detection**: Skips already completed steps
-- **Portable**: Works from any location
-- **Centralized backups**: All backups are stored in `~/.dotfiles-backups/` for easy management
-
-## 📂 Structure
-
-```
-dotfiles/
-├── bootstrap.sh            # Bootstrap script (installation & update)
-├── setup-git.sh            # Git configuration generator
-├── setup-ssh.sh            # SSH key generator
-├── README.md               # This documentation
-├── lib/                    # Shared libraries (code deduplication)
-│   ├── common.sh          # Helper functions (print_*, run_cmd, backup_file)
-│   ├── validation.sh      # Input validation (validate_email)
-│   ├── args.sh            # Argument parsing (init_common_args, parse_common_arg)
-│   └── README.md          # Library documentation
-├── templates/
-│   └── gitconfig          # Git configuration template (with placeholders)
-├── zsh/
-│   └── .zshrc             # Zsh configuration
-├── tmux/
-│   └── .tmux.conf         # Tmux configuration
-├── git/
-│   └── .gitconfig         # Git configuration (generated from template)
-└── kitty/
-    └── .config/
-        └── kitty/
-            ├── kitty.conf      # Kitty configuration
-            └── dracula.conf    # Dracula theme for Kitty
-```
-
-### Code Organization
-
-The project uses a **shared library approach** to eliminate code duplication:
-
-- **lib/common.sh**: UI helper functions (print_header, print_success, print_error, etc.) and constants (colors, symbols)
-- **lib/validation.sh**: Input validation functions (email format validation)
-- **lib/args.sh**: Common argument parsing utilities (verbose, unattended, skip-confirmation)
-
-All scripts (bootstrap.sh, setup-git.sh, setup-ssh.sh) source these libraries for consistent behavior and easier maintenance. See `lib/README.md` for complete library documentation.
-
-After installation, the following symlinks are created:
-```
-~/.zshrc → <path-to-dotfiles>/zsh/.zshrc
-~/.tmux.conf → <path-to-dotfiles>/tmux/.tmux.conf
-~/.gitconfig → <path-to-dotfiles>/git/.gitconfig (if configured)
-~/.config/kitty/kitty.conf → <path-to-dotfiles>/kitty/.config/kitty/kitty.conf
-~/.config/kitty/dracula.conf → <path-to-dotfiles>/kitty/.config/kitty/dracula.conf
-```
-
-## 🔌 Plugins
-
-### Zsh (via Zinit)
-
-| Plugin | Description |
-|--------|-------------|
-| [starship](https://starship.rs/) | Modern and fast prompt |
-| [zsh-syntax-highlighting](https://github.com/zsh-users/zsh-syntax-highlighting) | Command syntax highlighting |
-| [zsh-completions](https://github.com/zsh-users/zsh-completions) | Advanced autocompletion |
-| [zsh-autosuggestions](https://github.com/zsh-users/zsh-autosuggestions) | History-based suggestions |
-
-**Oh-My-Zsh Snippets**:
-- `git` - Git aliases and functions
-- `sudo` - Prefix previous command with sudo (ESC ESC)
-- `command-not-found` - Suggests installation of missing commands
-
-### Tmux (via TPM)
-
-| Plugin | Description |
-|--------|-------------|
-| [dracula/tmux](https://draculatheme.com/tmux) | Dracula theme with custom widgets |
-| [tmux-continuum](https://github.com/tmux-plugins/tmux-continuum) | Automatic session saving |
-| [tmux-resurrect](https://github.com/tmux-plugins/tmux-resurrect) | Session restoration after reboot |
-| [tmux-sensible](https://github.com/tmux-plugins/tmux-sensible) | Sensible default configurations |
-
-## ✨ Features
-
-### Kitty (Terminal Emulator)
-
-- **Theme**: Integrated Dracula with complete color palette
-- **Font**: CascadiaCode (automatically installed)
-  - Ligature support
-  - Optimized for code
-  - Variants: Regular, Bold, Italic, Light, etc.
-- **Configuration**:
-  - Zsh shell by default
-  - Font size: 16pt
-  - Hidden window decorations
-  - RGB and 256 color support
-
-### Zsh
-
-- **Auto-launch Tmux**: Tmux automatically launches on terminal open
-- **Smart history**:
-  - 5000 commands memorized
-  - Duplicate removal
-  - Shared history between sessions
-- **Custom keybindings**:
-  - `Ctrl+F`: Accept suggestion
-  - `Ctrl+P`: Backward history search
-  - `Ctrl+N`: Forward history search
-
-### Tmux
-
-- **Theme**: Dracula with system widgets (CPU, GPU, RAM, network, time)
-- **Pane navigation**: `Prefix (Ctrl+B)` then `h/j/k/l` to navigate
-- **Config reload**: `Prefix (Ctrl+B)` then `r` to reload configuration
-- **Status bar**: Positioned at the top of the screen
-- **Colors**: 256 colors and RGB support
-
-### Git
-
-- **Interactive setup**: Configure your name and email during installation
-- **Useful aliases**:
-  - `git st` → `git status`
-  - `git co` → `git checkout`
-  - `git br` → `git branch`
-  - `git ci` → `git commit`
-  - `git lg` → Pretty log with graph
-- **Auto-coloring**: Enabled for all git commands
-- **Default branch**: `main`
-- **Reconfigurable**: Run `./setup-git.sh` anytime to update your configuration
-
-### Essential Tools
-
-Optional installation of frequently used tools:
-- **neovim**: Modern, extensible text editor
-- **tldr**: Simplified man pages with practical examples (auto-updated after install)
-- **jq**: Command-line JSON processor
-- **curl**: Tool for transferring data with URLs
-- **xclip**: X clipboard manager (auto-copies SSH public key when generated)
-
-These tools are offered during installation - accept to install all, decline to skip.
-
-### SSH Key
-
-Automatic SSH key generation for seamless GitHub/GitLab access:
-- **Type**: ed25519 (modern, secure, compact)
-- **Auto-detection**: Checks if key already exists
-- **Email validation**: Regex validation like Git config
-- **Passphrase**: Optional (press Enter to skip)
-- **Email integration**: Uses Git email if configured
-- **Agent setup**: Automatically adds key to ssh-agent (prompts for passphrase if set)
-- **Clipboard integration**: Auto-copies public key if xclip is installed
-- **GitHub ready**: Displays public key with instructions to add on GitHub
-- **Backup**: Existing keys are backed up before regeneration
-
-After generation, the public key is displayed in the final message. If xclip is installed, it's automatically copied to your clipboard. Simply paste it to GitHub Settings → SSH Keys.
-
-To regenerate or create a new key:
-```bash
-./setup-ssh.sh
-```
-
-## 🎨 Customization
-
-### Modifying Configurations
-
-Edit files directly in your dotfiles folder:
+### Command-Line Arguments
 
 ```bash
-# Modify Zsh config
+# Specify Git configuration
+./bootstrap.sh --git-name "Your Name" --git-email "you@example.com"
+
+# Specify SSH email
+./bootstrap.sh --ssh-email "you@example.com"
+
+# Use same email for both Git and SSH
+./bootstrap.sh --email "you@example.com"
+
+# Combine options
+./bootstrap.sh -v -y --git-name "Developer" --email "dev@example.com"
+```
+
+### Environment Variables
+
+Perfect for CI/CD and automation:
+
+```bash
+# Full unattended setup
+GIT_NAME="Your Name" \
+GIT_EMAIL="you@example.com" \
+SSH_EMAIL="you@example.com" \
+./bootstrap.sh -y
+
+# Use EMAIL as fallback for both
+EMAIL="you@example.com" ./bootstrap.sh -y
+```
+
+### What Gets Backed Up
+
+All existing configurations are backed up to `~/.dotfiles-backups/` with timestamps:
+
+```
+~/.dotfiles-backups/
+├── zshrc.20251226_143022
+├── tmux.conf.20251226_143022
+├── gitconfig.20251226_153045
+├── kitty.20251226_143022/
+└── id_ed25519.20251226_160115
+```
+
+Backup format: `filename.YYYYMMDD_HHMMSS`
+
+## Customization
+
+### Modifying Zsh Configuration
+
+The Zsh config is located at `zsh/.zshrc`.
+
+**Adding Aliases:**
+```bash
+# Edit the file
 vim ~/dotfiles/zsh/.zshrc
 
-# Modify Tmux config
-vim ~/dotfiles/tmux/.tmux.conf
+# Add your aliases at the end
+alias myalias='command'
 
-# Modify Kitty config
-vim ~/dotfiles/kitty/.config/kitty/kitty.conf
-```
+# Redeploy
+cd ~/dotfiles
+stow -R zsh
 
-Changes are **immediately active** thanks to symlinks!
-
-### Adding Zsh Plugins
-
-Edit `zsh/.zshrc` and add:
-
-```bash
-zinit light user-name/plugin-name
-```
-
-Then reload:
-```bash
+# Reload Zsh
 source ~/.zshrc
 ```
 
-### Adding Tmux Plugins
-
-Edit `tmux/.tmux.conf` and add:
-
+**Adding Plugins:**
 ```bash
-set -g @plugin 'user-name/plugin-name'
+# Edit zsh/.zshrc and add to the Zinit section
+zinit light user/plugin-name
+
+# Reload
+source ~/.zshrc
 ```
 
-Then rerun the bootstrap script to install the new plugins:
+**Changing Prompt:**
 ```bash
+# The prompt is managed by Starship
+# Configure it via ~/.config/starship.toml
+# See: https://starship.rs/config/
+```
+
+### Modifying Tmux Configuration
+
+The Tmux config is located at `tmux/.tmux.conf`.
+
+**Adding Plugins:**
+```bash
+# Edit tmux/.tmux.conf
+vim ~/dotfiles/tmux/.tmux.conf
+
+# Add plugin
+set -g @plugin 'user/plugin-name'
+
+# Redeploy
+cd ~/dotfiles
+stow -R tmux
+
+# Reload Tmux (inside Tmux session)
+tmux source-file ~/.tmux.conf
+
+# Install new plugins: Prefix + I (capital i)
+```
+
+**Changing Keybindings:**
+```bash
+# Edit tmux/.tmux.conf
+bind-key C-a send-prefix  # Example: change prefix
+
+# Redeploy and reload (see above)
+```
+
+### Modifying Kitty Configuration
+
+Kitty configs are in `kitty/.config/kitty/`.
+
+**Changing Theme:**
+```bash
+# Edit kitty/.config/kitty/kitty.conf
+# Comment out current theme and add new one
+include new-theme.conf
+
+# Redeploy
+cd ~/dotfiles
+stow -R kitty
+
+# Kitty reloads automatically or Ctrl+Shift+F5
+```
+
+**Changing Font:**
+```bash
+# Edit kitty/.config/kitty/kitty.conf
+font_family      New Font Name
+font_size        14.0
+
+# Redeploy (see above)
+```
+
+### Adding Your Own Dotfiles
+
+```bash
+# 1. Create a directory for your application
+cd ~/dotfiles
+mkdir -p app/.config/app
+
+# 2. Add your configuration file
+cp ~/.config/app/config.conf app/.config/app/
+
+# 3. Remove or backup original
+rm ~/.config/app/config.conf
+
+# 4. Deploy with Stow
+stow app
+
+# 5. (Optional) Add to bootstrap.sh for automatic deployment
+# Edit bootstrap.sh and add:
+# run_cmd "stow -t \"$HOME\" app" "Deploying app configuration"
+```
+
+### Syncing Across Machines
+
+```bash
+# On machine 1: Commit your customizations
+cd ~/dotfiles
+git add .
+git commit -m "Update configurations"
+git push
+
+# On machine 2: Pull and redeploy
+cd ~/dotfiles
+git pull
+./bootstrap.sh  # Redeploy with latest changes
+```
+
+## Standalone Scripts
+
+### Git Configuration Script
+
+Use `setup-git.sh` independently to configure Git:
+
+```bash
+# Interactive mode
+./setup-git.sh
+
+# Unattended mode
+./setup-git.sh --unattended --skip-confirmation
+
+# With environment variables
+GIT_NAME="Your Name" GIT_EMAIL="you@example.com" ./setup-git.sh --unattended
+```
+
+**What it does:**
+- Generates `.gitconfig` from template
+- Validates email format
+- Backs up existing configuration
+- Deploys via GNU Stow
+
+### SSH Key Generation Script
+
+Use `setup-ssh.sh` independently to generate SSH keys:
+
+```bash
+# Interactive mode
+./setup-ssh.sh
+
+# Unattended mode
+SSH_EMAIL="you@example.com" ./setup-ssh.sh --unattended --skip-confirmation
+```
+
+**What it does:**
+- Generates ed25519 SSH key pair
+- Optional passphrase protection
+- Backs up existing keys
+- Adds key to ssh-agent
+- Copies public key to clipboard (if xclip available)
+
+## Troubleshooting
+
+### Permission Denied
+
+```bash
+# Ensure scripts are executable
+chmod +x bootstrap.sh setup-git.sh setup-ssh.sh
+
+# Ensure you have sudo access
+sudo -v
+```
+
+### Stow Conflicts
+
+If Stow reports conflicts:
+
+```bash
+# Files already exist and aren't symlinks
+# The bootstrap script backs these up automatically
+# If running Stow manually, use -R to restow
+cd ~/dotfiles
+stow -R zsh  # Restow a specific package
+```
+
+### Plugin Installation Fails
+
+```bash
+# Zsh plugins
+# Delete and reinstall Zinit
+rm -rf ~/.local/share/zinit
+./bootstrap.sh  # Reinstalls Zinit
+
+# Tmux plugins
+# Delete and reinstall TPM
+rm -rf ~/.tmux/plugins/tpm
+./bootstrap.sh  # Reinstalls TPM
+# Then: Prefix + I to install plugins
+```
+
+### Shell Didn't Change
+
+```bash
+# Verify Zsh is installed
+which zsh
+
+# Change shell manually
+chsh -s $(which zsh)
+
+# Logout and login for changes to take effect
+```
+
+### Kitty Not Found
+
+```bash
+# The package name varies by distribution
+# Fedora/RHEL
+sudo dnf install kitty
+
+# Debian/Ubuntu
+sudo apt install kitty
+
+# Then redeploy
+cd ~/dotfiles && stow kitty
+```
+
+## Advanced Usage
+
+### Unattended Mode for CI/CD
+
+Perfect for Docker containers or automated deployments:
+
+```dockerfile
+# In Dockerfile
+RUN git clone https://github.com/yourusername/dotfiles.git ~/dotfiles
+RUN EMAIL="dev@example.com" ~/dotfiles/bootstrap.sh -y
+```
+
+Or in shell scripts:
+
+```bash
+#!/bin/bash
+export GIT_NAME="CI User"
+export EMAIL="ci@example.com"
+cd ~/dotfiles && ./bootstrap.sh -y
+```
+
+### Environment Variables Reference
+
+| Variable | Description | Fallback |
+|----------|-------------|----------|
+| `EMAIL` | Global email for Git and SSH | None |
+| `GIT_NAME` | Git user name | Prompt/skip |
+| `GIT_EMAIL` | Git user email | `$EMAIL` |
+| `SSH_EMAIL` | SSH key comment | `$EMAIL` → Git email |
+
+**Priority:** Specific variable → `EMAIL` → Prompt (interactive) / Skip (unattended)
+
+### Re-running the Script
+
+The bootstrap script is **idempotent** and can be safely rerun:
+
+```bash
+# Update plugins
+./bootstrap.sh -y
+
+# Redeploy after making changes
 ./bootstrap.sh
+
+# Fix broken installation
+./bootstrap.sh -v  # Verbose mode to see what's happening
 ```
 
-Or manually in Tmux:
-- `Prefix (Ctrl+B)` then `I` (capital) to install
+The script intelligently:
+- Skips already-installed packages
+- Updates existing plugin managers
+- Respects existing symlinks
+- Creates backups only when needed
 
-### Customizing Kitty
+## Uninstallation
 
-Edit `kitty/.config/kitty/kitty.conf`:
+### Removing Dotfiles
 
 ```bash
-# Change font
-font_family MonoLisa
+# Unstow configurations (removes symlinks)
+cd ~/dotfiles
+stow -D zsh tmux git kitty
 
-# Change size
-font_size 14.0
+# Restore from backups if needed
+cp ~/.dotfiles-backups/zshrc.* ~/.zshrc
+cp ~/.dotfiles-backups/tmux.conf.* ~/.tmux.conf
+# etc.
 
-# Change theme (create a new .conf file)
-include my-theme.conf
+# Change shell back to bash
+chsh -s /bin/bash
+
+# Remove the repository
+rm -rf ~/dotfiles
 ```
 
-### Customizing Git
-
-To reconfigure Git (change name, email):
+### Cleaning Up Completely
 
 ```bash
-./setup-git.sh
-```
-
-To add more aliases or settings, edit `git/.gitconfig` template:
-
-```bash
-vim ~/dotfiles/git/.gitconfig
-```
-
-Then regenerate your config:
-
-```bash
-./setup-git.sh
-```
-
-## 🗑️ Uninstallation
-
-```bash
-# 1. Remove symlinks
-rm ~/.zshrc ~/.tmux.conf ~/.gitconfig
-rm -rf ~/.config/kitty
-
-# 2. Restore backups (if needed)
-# All backups are stored in ~/.dotfiles-backups/
-ls ~/.dotfiles-backups/  # List available backups
-cp ~/.dotfiles-backups/zshrc.YYYYMMDD_HHMMSS ~/.zshrc
-cp ~/.dotfiles-backups/tmux.conf.YYYYMMDD_HHMMSS ~/.tmux.conf
-cp ~/.dotfiles-backups/gitconfig.YYYYMMDD_HHMMSS ~/.gitconfig
-cp -r ~/.dotfiles-backups/kitty.YYYYMMDD_HHMMSS ~/.config/kitty
-
-# 3. Remove plugin managers (optional)
+# Remove plugin managers and plugins
 rm -rf ~/.local/share/zinit
 rm -rf ~/.tmux/plugins
 
-# 4. Remove backups directory (optional)
+# Remove backups
 rm -rf ~/.dotfiles-backups
 
-# 5. Uninstall programs (optional)
-# Fedora
-sudo dnf remove kitty cascadia-code-fonts
-
-# Debian
-sudo apt remove kitty fonts-cascadia-code
-
-# 6. Revert to default shell (optional)
-chsh -s /bin/bash
+# Remove Kitty config (if you don't want it)
+rm -rf ~/.config/kitty
 ```
 
-## 🔧 Troubleshooting
+## Project Structure
 
-### Tmux Plugins Don't Display
-
-Tmux plugins are automatically installed by the bootstrap script. If they don't appear:
-
-```bash
-# Rerun the bootstrap script
-./bootstrap.sh
-
-# Or manually install:
-~/.tmux/plugins/tpm/bin/install_plugins
-
-# Or in Tmux, press:
-Prefix (Ctrl+B) then I (capital)
+```
+dotfiles/
+├── bootstrap.sh              # Main installation script
+├── setup-git.sh              # Git configuration generator
+├── setup-ssh.sh              # SSH key generator
+├── lib/                      # Shared libraries
+│   ├── common.sh            # UI helpers and utilities
+│   ├── validation.sh        # Input validation functions
+│   └── args.sh              # Argument parsing
+├── templates/
+│   └── gitconfig            # Git config template
+├── zsh/
+│   └── .zshrc               # Zsh configuration
+├── tmux/
+│   └── .tmux.conf           # Tmux configuration
+├── kitty/
+│   └── .config/kitty/       # Kitty terminal configuration
+│       ├── kitty.conf
+│       └── dracula.conf
+└── git/
+    └── .gitconfig           # Generated Git config (deployed here)
 ```
 
-### Starship Doesn't Display
+## License
 
-```bash
-# Verify that Zinit installed starship
-ls ~/.local/share/zinit/plugins/starship---starship/
+MIT License - See [LICENSE](LICENSE) file for details.
 
-# Reload zsh
-exec zsh
-```
-
-### Zsh Plugins Don't Work
-
-```bash
-# Update Zinit
-zinit update --all
-
-# Clear cache
-zinit cclear
-```
-
-### "stow: conflicts" Error
-
-This means a file already exists and is not a symlink.
-
-```bash
-# The script normally created a backup
-# Remove the conflicting file:
-rm ~/.zshrc  # or ~/.tmux.conf
-
-# Rerun the script
-./bootstrap.sh
-```
-
-### Script Can't Find Config Files
-
-Make sure to run the script from the dotfiles folder:
-
-```bash
-cd ~/dotfiles  # or the path where you cloned
-./bootstrap.sh
-```
-
-The script automatically detects its location and finds configs.
-
-### Kitty Doesn't Use the Right Font
-
-```bash
-# Verify CascadiaCode is installed
-fc-list | grep -i cascadia
-
-# If missing, install manually:
-# Fedora
-sudo dnf install cascadia-code-fonts
-
-# Debian
-sudo apt install fonts-cascadia-code
-
-# Refresh cache
-fc-cache -f
-```
-
-### Default Terminal Isn't Zsh
-
-If you're not using Kitty, some terminals have their own shell configuration:
-
-**GNOME Terminal**:
-- Edit → Preferences → Profile → Command
-- Check "Run a login shell"
-
-**Konsole**:
-- Settings → Edit Current Profile → General
-- Command: `/bin/zsh`
-
-**Alternative**: Run `zsh` manually or add `exec zsh` to your `.bashrc`
-
-## 📝 Notes
-
-- Configurations are version controlled with Git for easy sharing between machines
-- Uses Stow for clean symlink management
-- Compatible with Fedora and Debian/Ubuntu
-- The script is idempotent: can be safely rerun for updates
-- The script auto-detects its location: you can clone anywhere
-- Kitty and CascadiaCode are optional but highly recommended for full experience
-
-## 🔄 Synchronization Between Machines
-
-To use the same config on multiple machines:
-
-```bash
-# On machine 1 (initial creation)
-cd ~/dotfiles
-git init
-git add .
-git commit -m "Initial dotfiles"
-git remote add origin <your-repo-url>
-git push -u origin main
-
-# On machine 2 (new installation)
-git clone <your-repo-url> ~/dotfiles
-cd ~/dotfiles
-./bootstrap.sh
-
-# Regular updates on any machine
-cd ~/dotfiles
-git pull
-./bootstrap.sh  # Apply changes
-```
-
-## 🎨 Dracula Theme
-
-All tools use the Dracula theme for visual consistency:
-- **Kitty**: Complete palette (foreground, background, 16 colors)
-- **Tmux**: Widgets and status bar
-- **Starship**: Automatically adapts to terminal colors
-
-**Dracula Palette**:
-- Background: `#282a36`
-- Foreground: `#f8f8f2`
-- Selection: `#44475a`
-- Comment: `#6272a4`
-- Cyan: `#8be9fd`
-- Green: `#50fa7b`
-- Orange: `#ffb86c`
-- Pink: `#ff79c6`
-- Purple: `#bd93f9`
-- Red: `#ff5555`
-- Yellow: `#f1fa8c`
-
-## 📄 License
-
-Personal configuration - Free to use and modify
-
-## 👤 Author
+## Author
 
 **R4yL**
-- Creation date: 16/06/24
-- Version: 1.0
-- Last update: 26/12/25
+- Email: luca.ray@protonmail.ch
+- GitHub: [@yourusername](https://github.com/yourusername)
+
+## Contributing
+
+Contributions are welcome! Feel free to:
+- Open issues for bugs or feature requests
+- Submit pull requests
+- Share your customizations
+- Improve documentation
 
 ---
 
-**Happy shelling! 🚀**
+**Happy coding!** 🚀
