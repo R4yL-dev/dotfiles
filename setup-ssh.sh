@@ -12,39 +12,15 @@ set -e
 # Source Shared Libraries
 ################################################################################
 
+# Source all libraries using centralized initialization
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Source libraries with error handling
-if ! source "$SCRIPT_DIR/lib/common.sh" 2>/dev/null; then
-    echo "Error: Failed to load common library"
-    echo "Make sure you're running from the dotfiles directory"
-    exit 1
-fi
-
-if ! source "$SCRIPT_DIR/lib/validation.sh" 2>/dev/null; then
-    echo "Error: Failed to load validation library"
-    exit 1
-fi
-
-if ! source "$SCRIPT_DIR/lib/args.sh" 2>/dev/null; then
-    echo "Error: Failed to load args library"
-    exit 1
-fi
+source "$SCRIPT_DIR/lib/init.sh"
 
 ################################################################################
 # Parse Command Line Arguments
 ################################################################################
 
-init_common_args
-while [[ $# -gt 0 ]]; do
-    if parse_common_arg "$1"; then
-        shift
-    else
-        echo "Unknown option: $1"
-        echo "Usage: $0 [-v|--verbose] [--unattended] [--skip-confirmation]"
-        exit 1
-    fi
-done
+parse_all_common_args "$0" "$@"
 
 ################################################################################
 # Main Setup
@@ -90,13 +66,11 @@ setup_ssh_key() {
     # Unattended mode: use environment variables
     if [ "$UNATTENDED" = true ]; then
         # Use environment variables with fallback pattern
-        ssh_email="${SSH_EMAIL:-${EMAIL}}"
+        ssh_email=$(get_email_with_fallback "SSH_EMAIL")
         passphrase=""  # No passphrase in unattended mode
 
         # Validate email format
-        if ! validate_email "$ssh_email" "SSH email (environment variable)"; then
-            exit 1
-        fi
+        validate_email_or_exit "$ssh_email" "SSH email (environment variable)"
 
         print_info "Using environment variables:"
         print_info "  Email: $ssh_email"
@@ -109,30 +83,13 @@ setup_ssh_key() {
         if [ -f "$HOME/.gitconfig" ]; then
             git_config_email=$(git config --global user.email 2>/dev/null || echo "")
         fi
-        local default_email="${SSH_EMAIL:-${EMAIL:-${git_config_email}}}"
+        local default_email
+        default_email=$(get_email_with_fallback "SSH_EMAIL")
+        default_email="${default_email:-${git_config_email}}"
 
-        if [ -n "$default_email" ]; then
-            echo
-            read -r -p "Email for SSH key (default: $default_email): " input_email
-            if [ -n "$input_email" ]; then
-                ssh_email="$input_email"
-            else
-                ssh_email="$default_email"
-            fi
-        else
-            echo
-            read -r -p "Email for SSH key: " ssh_email
-        fi
-
-        # Validate email
-        while [ -z "$ssh_email" ] || ! validate_email "$ssh_email" "SSH email" 2>/dev/null; do
-            if [ -z "$ssh_email" ]; then
-                echo -e "${RED}Email cannot be empty${NC}"
-            else
-                echo -e "${RED}Invalid email format${NC}"
-            fi
-            read -r -p "Email for SSH key: " ssh_email
-        done
+        echo
+        # Ask for email with validation
+        ssh_email=$(prompt_with_validation "Email for SSH key" "$default_email" "validate_email" "SSH email")
 
         # Ask for passphrase
         echo

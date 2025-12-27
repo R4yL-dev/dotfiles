@@ -9,19 +9,24 @@
 # Usage: source "$SCRIPT_DIR/lib/common.sh"
 ################################################################################
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+# Colors for output (readonly to prevent accidental modification)
+readonly RED='\033[0;31m'
+readonly GREEN='\033[0;32m'
+readonly YELLOW='\033[1;33m'
+readonly BLUE='\033[0;34m'
+readonly NC='\033[0m' # No Color
 
-# Symbols
-CHECK="${GREEN}✓${NC}"
-CROSS="${RED}✗${NC}"
-INFO="${BLUE}ℹ${NC}"
-WARN="${YELLOW}⚠${NC}"
-CIRCLE="${YELLOW}⊙${NC}"
+# Symbols (readonly to prevent accidental modification)
+readonly CHECK="${GREEN}✓${NC}"
+readonly CROSS="${RED}✗${NC}"
+readonly INFO="${BLUE}ℹ${NC}"
+readonly WARN="${YELLOW}⚠${NC}"
+readonly CIRCLE="${YELLOW}⊙${NC}"
+
+# Exit codes (readonly constants)
+readonly EXIT_SUCCESS=0
+readonly EXIT_ERROR=1
+readonly EXIT_CANCELLED=2
 
 ################################################################################
 # Helper Functions
@@ -53,6 +58,9 @@ print_skip() {
     echo -e "${CIRCLE} $1"
 }
 
+# Execute command with output control based on VERBOSE flag
+# Usage: run_cmd command arg1 arg2 ...
+# If VERBOSE=true, shows command output; otherwise suppresses it
 run_cmd() {
     if [ "$VERBOSE" = true ]; then
         "$@"
@@ -92,4 +100,95 @@ backup_file() {
     fi
 
     echo "$backup_path"
+}
+
+# Execute a script with automatic verbose flag handling
+# Usage: run_script "setup-git.sh" --skip-confirmation --unattended
+# Returns: The exit code of the executed script
+run_script() {
+    local script="$1"
+    shift
+    local args=("$@")
+
+    local script_path="$SCRIPT_DIR/$script"
+
+    if [ ! -x "$script_path" ]; then
+        print_error "$script not found or not executable"
+        return "$EXIT_ERROR"
+    fi
+
+    # Automatically add -v flag if VERBOSE is enabled
+    if [ "$VERBOSE" = true ]; then
+        "$script_path" "${args[@]}" -v
+    else
+        "$script_path" "${args[@]}"
+    fi
+
+    return $?
+}
+
+# Prompt user for input with an optional default value
+# Usage: result=$(prompt_with_default "Enter name" "John Doe")
+# Returns: User input or default value if input is empty
+prompt_with_default() {
+    local prompt_text="$1"
+    local default_value="$2"
+    local result
+
+    if [ -n "$default_value" ]; then
+        read -r -p "$prompt_text (default: $default_value): " result
+        echo "${result:-$default_value}"
+    else
+        read -r -p "$prompt_text: " result
+        echo "$result"
+    fi
+}
+
+# Prompt user for input with validation loop
+# Usage: result=$(prompt_with_validation "Enter email" "default@example.com" validate_email "email")
+# Parameters:
+#   $1: Prompt text
+#   $2: Default value (optional, can be empty)
+#   $3: Validation function name (must accept value and param_name)
+#   $4: Parameter name for validation error messages
+prompt_with_validation() {
+    local prompt_text="$1"
+    local default_value="$2"
+    local validation_func="$3"
+    local param_name="$4"
+    local result
+
+    while true; do
+        if [ -n "$default_value" ]; then
+            read -r -p "$prompt_text (default: $default_value): " result
+            # If empty, use default value
+            if [ -z "$result" ]; then
+                result="$default_value"
+                echo "$result"
+                return 0
+            fi
+        else
+            read -r -p "$prompt_text: " result
+        fi
+
+        # Check if empty (when no default)
+        if [ -z "$result" ] && [ -z "$default_value" ]; then
+            echo -e "${RED}${param_name^} cannot be empty${NC}" >&2
+            continue
+        fi
+
+        # Run validation if provided
+        if [ -n "$validation_func" ]; then
+            if $validation_func "$result" "$param_name" 2>/dev/null; then
+                echo "$result"
+                return 0
+            else
+                echo -e "${RED}Invalid ${param_name}${NC}" >&2
+                continue
+            fi
+        else
+            echo "$result"
+            return 0
+        fi
+    done
 }

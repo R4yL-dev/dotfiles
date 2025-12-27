@@ -12,39 +12,15 @@ set -e
 # Source Shared Libraries
 ################################################################################
 
+# Source all libraries using centralized initialization
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Source libraries with error handling
-if ! source "$SCRIPT_DIR/lib/common.sh" 2>/dev/null; then
-    echo "Error: Failed to load common library"
-    echo "Make sure you're running from the dotfiles directory"
-    exit 1
-fi
-
-if ! source "$SCRIPT_DIR/lib/validation.sh" 2>/dev/null; then
-    echo "Error: Failed to load validation library"
-    exit 1
-fi
-
-if ! source "$SCRIPT_DIR/lib/args.sh" 2>/dev/null; then
-    echo "Error: Failed to load args library"
-    exit 1
-fi
+source "$SCRIPT_DIR/lib/init.sh"
 
 ################################################################################
 # Parse Command Line Arguments
 ################################################################################
 
-init_common_args
-while [[ $# -gt 0 ]]; do
-    if parse_common_arg "$1"; then
-        shift
-    else
-        echo "Unknown option: $1"
-        echo "Usage: $0 [-v|--verbose] [--unattended] [--skip-confirmation]"
-        exit 1
-    fi
-done
+parse_all_common_args "$0" "$@"
 
 ################################################################################
 # Main Setup
@@ -104,7 +80,7 @@ setup_git_config() {
     if [ "$UNATTENDED" = true ]; then
         # Use environment variables with fallback pattern
         git_name="$GIT_NAME"
-        git_email="${GIT_EMAIL:-${EMAIL}}"
+        git_email=$(get_email_with_fallback "GIT_EMAIL")
 
         # Validate name is not empty
         if [[ -z "$git_name" ]]; then
@@ -113,9 +89,7 @@ setup_git_config() {
         fi
 
         # Validate email format
-        if ! validate_email "$git_email" "git email (environment variable)"; then
-            exit 1
-        fi
+        validate_email_or_exit "$git_email" "git email (environment variable)"
 
         print_info "Using environment variables:"
         print_info "  Name: $git_name"
@@ -130,53 +104,16 @@ setup_git_config() {
         # Determine default name: environment variable > current git config > none
         local default_name="${GIT_NAME:-${current_name}}"
 
-        # Ask for name with default value if it exists
-        if [ -n "$default_name" ]; then
-            read -r -p "Full name (default: $default_name): " git_name
-            # If empty, use default value
-            if [ -z "$git_name" ]; then
-                git_name="$default_name"
-            fi
-        else
-            read -r -p "Full name (e.g. John Doe): " git_name
-            while [ -z "$git_name" ]; do
-                echo -e "${RED}Name cannot be empty${NC}"
-                read -r -p "Full name (e.g. John Doe): " git_name
-            done
-        fi
+        # Ask for name with validation
+        git_name=$(prompt_with_validation "Full name (e.g. John Doe)" "$default_name" "" "name")
 
         # Determine default email: environment variables > current git config > none
-        local default_email="${GIT_EMAIL:-${EMAIL:-${current_email}}}"
+        local default_email
+        default_email=$(get_email_with_fallback "GIT_EMAIL")
+        default_email="${default_email:-${current_email}}"
 
-        # Ask for email with default value if it exists
-        if [ -n "$default_email" ]; then
-            read -r -p "Email (default: $default_email): " git_email
-            # If empty, use default value
-            if [ -z "$git_email" ]; then
-                git_email="$default_email"
-            else
-                # Validate the new email
-                while ! validate_email "$git_email" "git email" 2>/dev/null; do
-                    echo -e "${RED}Invalid email format${NC}"
-                    read -r -p "Email (default: $default_email): " git_email
-                    # Allow user to press Enter to use default
-                    if [ -z "$git_email" ]; then
-                        git_email="$default_email"
-                        break
-                    fi
-                done
-            fi
-        else
-            read -r -p "Email (e.g. john@example.com): " git_email
-            while [ -z "$git_email" ] || ! validate_email "$git_email" "git email" 2>/dev/null; do
-                if [ -z "$git_email" ]; then
-                    echo -e "${RED}Email cannot be empty${NC}"
-                else
-                    echo -e "${RED}Invalid email format${NC}"
-                fi
-                read -r -p "Email (e.g. john@example.com): " git_email
-            done
-        fi
+        # Ask for email with validation
+        git_email=$(prompt_with_validation "Email (e.g. john@example.com)" "$default_email" "validate_email" "git email")
     fi
 
     # Generate gitconfig from template

@@ -13,19 +13,9 @@ set -e  # Exit on error
 # Source Shared Libraries
 ################################################################################
 
+# Source all libraries using centralized initialization
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-# Source libraries with error handling
-if ! source "$SCRIPT_DIR/lib/common.sh" 2>/dev/null; then
-    echo "Error: Failed to load common library"
-    echo "Make sure you're running from the dotfiles directory"
-    exit 1
-fi
-
-if ! source "$SCRIPT_DIR/lib/validation.sh" 2>/dev/null; then
-    echo "Error: Failed to load validation library"
-    exit 1
-fi
+source "$SCRIPT_DIR/lib/init.sh"
 
 ################################################################################
 # Parse Command Line Arguments
@@ -45,10 +35,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --git-name)
-            if [[ -z "$2" ]] || [[ "$2" == -* ]]; then
-                echo "Error: --git-name requires a value"
-                exit 1
-            fi
+            require_arg_value "--git-name" "$2"
             # Check if value is only whitespace
             if [[ "$2" =~ ^[[:space:]]*$ ]]; then
                 echo "Error: --git-name cannot be only whitespace"
@@ -58,29 +45,20 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         --git-email)
-            if [[ -z "$2" ]] || [[ "$2" == -* ]]; then
-                echo "Error: --git-email requires a value"
-                exit 1
-            fi
-            validate_email "$2" "--git-email" || exit 1
+            require_arg_value "--git-email" "$2"
+            validate_email_or_exit "$2" "--git-email"
             export GIT_EMAIL="$2"
             shift 2
             ;;
         --ssh-email)
-            if [[ -z "$2" ]] || [[ "$2" == -* ]]; then
-                echo "Error: --ssh-email requires a value"
-                exit 1
-            fi
-            validate_email "$2" "--ssh-email" || exit 1
+            require_arg_value "--ssh-email" "$2"
+            validate_email_or_exit "$2" "--ssh-email"
             export SSH_EMAIL="$2"
             shift 2
             ;;
         --email)
-            if [[ -z "$2" ]] || [[ "$2" == -* ]]; then
-                echo "Error: --email requires a value"
-                exit 1
-            fi
-            validate_email "$2" "--email" || exit 1
+            require_arg_value "--email" "$2"
+            validate_email_or_exit "$2" "--email"
             export EMAIL="$2"
             shift 2
             ;;
@@ -103,17 +81,10 @@ if [[ -n "$GIT_NAME" ]] && [[ "$GIT_NAME" =~ ^[[:space:]]*$ ]]; then
     exit 1
 fi
 
-if [[ -n "$EMAIL" ]]; then
-    validate_email "$EMAIL" "EMAIL (environment variable)" || exit 1
-fi
-
-if [[ -n "$GIT_EMAIL" ]]; then
-    validate_email "$GIT_EMAIL" "GIT_EMAIL (environment variable)" || exit 1
-fi
-
-if [[ -n "$SSH_EMAIL" ]]; then
-    validate_email "$SSH_EMAIL" "SSH_EMAIL (environment variable)" || exit 1
-fi
+# Validate email environment variables
+[[ -n "$EMAIL" ]] && validate_email_or_exit "$EMAIL" "EMAIL (environment variable)"
+[[ -n "$GIT_EMAIL" ]] && validate_email_or_exit "$GIT_EMAIL" "GIT_EMAIL (environment variable)"
+[[ -n "$SSH_EMAIL" ]] && validate_email_or_exit "$SSH_EMAIL" "SSH_EMAIL (environment variable)"
 
 # Global variables
 KITTY_INSTALLED=false
@@ -625,7 +596,8 @@ setup_git_prompt() {
     # Unattended mode: check environment variables
     if [ "$UNATTENDED" = true ]; then
         # Calculate final git email with fallback pattern
-        local final_git_email="${GIT_EMAIL:-${EMAIL}}"
+        local final_git_email
+        final_git_email=$(get_email_with_fallback "GIT_EMAIL")
 
         # Check if required environment variables are set
         if [ -z "$GIT_NAME" ] || [ -z "$final_git_email" ]; then
@@ -636,21 +608,10 @@ setup_git_prompt() {
 
         # Variables are set, configure Git
         print_info "Configuring Git with environment variables..."
-        if [ -x "$SCRIPT_DIR/setup-git.sh" ]; then
-            if [ "$VERBOSE" = true ]; then
-                "$SCRIPT_DIR/setup-git.sh" --skip-confirmation --unattended -v
-            else
-                "$SCRIPT_DIR/setup-git.sh" --skip-confirmation --unattended
-            fi
-            local git_exit_code=$?
-
-            if [ $git_exit_code -eq 0 ]; then
-                GIT_CONFIGURED=true
-            else
-                print_error "Git configuration failed"
-            fi
+        if run_script "setup-git.sh" --skip-confirmation --unattended; then
+            GIT_CONFIGURED=true
         else
-            print_error "setup-git.sh not found or not executable"
+            print_error "Git configuration failed"
         fi
         return
     fi
@@ -702,20 +663,17 @@ setup_git_prompt() {
     fi
 
     # Run the git setup script
-    if [ -x "$SCRIPT_DIR/setup-git.sh" ]; then
-        "$SCRIPT_DIR/setup-git.sh" --skip-confirmation
-        local git_exit_code=$?
+    local git_exit_code
+    run_script "setup-git.sh" --skip-confirmation
+    git_exit_code=$?
 
-        if [ $git_exit_code -eq 0 ]; then
-            GIT_CONFIGURED=true
-        elif [ $git_exit_code -eq 2 ]; then
-            print_info "Git configuration cancelled by user"
-        else
-            print_error "Git configuration failed"
-            print_warn "You can run ./setup-git.sh later to configure it"
-        fi
+    if [ $git_exit_code -eq 0 ]; then
+        GIT_CONFIGURED=true
+    elif [ $git_exit_code -eq 2 ]; then
+        print_info "Git configuration cancelled by user"
     else
-        print_error "setup-git.sh not found or not executable"
+        print_error "Git configuration failed"
+        print_warn "You can run ./setup-git.sh later to configure it"
     fi
 }
 
@@ -729,7 +687,8 @@ setup_ssh_key() {
     # Unattended mode: check environment variables
     if [ "$UNATTENDED" = true ]; then
         # Calculate final ssh email with fallback pattern
-        local final_ssh_email="${SSH_EMAIL:-${EMAIL}}"
+        local final_ssh_email
+        final_ssh_email=$(get_email_with_fallback "SSH_EMAIL")
 
         # Check if required environment variable is set
         if [ -z "$final_ssh_email" ]; then
@@ -746,21 +705,10 @@ setup_ssh_key() {
 
         # Generate SSH key
         print_info "Generating SSH key with environment variables..."
-        if [ -x "$SCRIPT_DIR/setup-ssh.sh" ]; then
-            if [ "$VERBOSE" = true ]; then
-                "$SCRIPT_DIR/setup-ssh.sh" --skip-confirmation --unattended -v
-            else
-                "$SCRIPT_DIR/setup-ssh.sh" --skip-confirmation --unattended
-            fi
-            local ssh_exit_code=$?
-
-            if [ $ssh_exit_code -eq 0 ]; then
-                SSH_KEY_GENERATED=true
-            else
-                print_error "SSH key generation failed"
-            fi
+        if run_script "setup-ssh.sh" --skip-confirmation --unattended; then
+            SSH_KEY_GENERATED=true
         else
-            print_error "setup-ssh.sh not found or not executable"
+            print_error "SSH key generation failed"
         fi
         return
     fi
@@ -809,24 +757,17 @@ setup_ssh_key() {
     fi
 
     # Run the SSH setup script
-    if [ -x "$SCRIPT_DIR/setup-ssh.sh" ]; then
-        if [ "$VERBOSE" = true ]; then
-            "$SCRIPT_DIR/setup-ssh.sh" --skip-confirmation -v
-        else
-            "$SCRIPT_DIR/setup-ssh.sh" --skip-confirmation
-        fi
-        local ssh_exit_code=$?
+    local ssh_exit_code
+    run_script "setup-ssh.sh" --skip-confirmation
+    ssh_exit_code=$?
 
-        if [ $ssh_exit_code -eq 0 ]; then
-            SSH_KEY_GENERATED=true
-        elif [ $ssh_exit_code -eq 2 ]; then
-            print_info "SSH key generation cancelled by user"
-        else
-            print_error "SSH key generation failed"
-            print_warn "You can run ./setup-ssh.sh later to generate it"
-        fi
+    if [ $ssh_exit_code -eq 0 ]; then
+        SSH_KEY_GENERATED=true
+    elif [ $ssh_exit_code -eq 2 ]; then
+        print_info "SSH key generation cancelled by user"
     else
-        print_error "setup-ssh.sh not found or not executable"
+        print_error "SSH key generation failed"
+        print_warn "You can run ./setup-ssh.sh later to generate it"
     fi
 }
 
