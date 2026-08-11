@@ -69,6 +69,8 @@ alias ls='ls --color'
 alias la='ls -a'
 alias lla='ls -la'
 alias c='clear'
+alias update='sudo dnf upgrade --refresh && flatpak update -y && if command -v fwupdmgr &> /dev/null; then fwupdmgr refresh && fwupdmgr update; fi && sudo needs-restarting -r'
+
 ### End of Zinit's installer chunk
 export PATH=~/.npm-global/bin:$PATH
 export PATH="$HOME/.local/bin:$PATH"
